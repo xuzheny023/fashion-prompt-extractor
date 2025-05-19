@@ -1,0 +1,17 @@
+{
+  "领型": {
+    "V领": "v-neck",
+    "圆领": "round neck",
+    "高领": "turtleneck"
+  },
+  "袖型": {
+    "无袖": "sleeveless",
+    "长袖": "long sleeves",
+    "泡泡袖": "puff sleeves"
+  },
+  "裙型": {
+    "伞裙": "flare skirt",
+    "A字裙": "A-line skirt",
+    "包臀裙": "pencil skirt"
+  }
+}
