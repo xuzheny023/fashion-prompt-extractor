@@ -15,4 +15,15 @@ This tool analyzes clothing images—especially AI-generated design drafts—and
 - 🧪 Built for Streamlit (local deployment)
 
 ## 📂 Project Structure
+ai-fashion-analyzer/
+│
+├── app.py                     # Streamlit entry
+├── requirements.txt
+├── data/
+│   └── structure_keywords.json # Feature-prompt mapping
+├── src/
+│   ├── structure_detect.py     # Simulated clothing structure extractor
+│   └── prompt_builder.py       # Prompt builder from keywords
+├── images/                    # Input samples (user upload)
+└── outputs/                   # Generated outputs (future)
 
