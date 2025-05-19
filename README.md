@@ -1,5 +1,5 @@
 # 👗 AI Fashion Analyzer
-
+![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
 Extract structural fashion keywords from AI-generated images and generate precise prompts for design use.
 
 ## 🧠 Project Overview
@@ -29,4 +29,5 @@ ai-fashion-analyzer/
 │   └── prompt_builder.py        # Prompt builder from keywords
 ├── images/                    # Input samples (user upload)
 └── outputs/                   # Generated outputs (future)
+
 
