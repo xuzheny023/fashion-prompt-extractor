@@ -40,5 +40,5 @@ streamlit run app.py
 ```
 
 
-© 2025 [Oceanus Xu (徐振洋)]  
+© 2025 [Oceanus Xu (Xu Zhenyang)]  
 This project is released under the MIT License.
