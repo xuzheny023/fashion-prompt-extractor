@@ -14,16 +14,19 @@ This tool analyzes clothing images—especially AI-generated design drafts—and
 - 🔄 Planned: keyword-based LoRA filtering and generation
 - 🧪 Built for Streamlit (local deployment)
 
+```markdown
 ## 📂 Project Structure
+
+```text
 ai-fashion-analyzer/
 │
 ├── app.py                     # Streamlit entry
 ├── requirements.txt
 ├── data/
-│   └── structure_keywords.json # Feature-prompt mapping
+│   └── structure_keywords.json  # Feature-prompt mapping
 ├── src/
-│   ├── structure_detect.py     # Simulated clothing structure extractor
-│   └── prompt_builder.py       # Prompt builder from keywords
+│   ├── structure_detect.py      # Simulated clothing structure extractor
+│   └── prompt_builder.py        # Prompt builder from keywords
 ├── images/                    # Input samples (user upload)
 └── outputs/                   # Generated outputs (future)
 
