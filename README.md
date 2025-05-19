@@ -30,4 +30,14 @@ ai-fashion-analyzer/
 ├── images/                    # Input samples (user upload)
 └── outputs/                   # Generated outputs (future)
 
+## 🚀 How to Run
 
+```bash
+pip install -r requirements.txt
+streamlit run app.py
+
+```markdown
+---
+
+© 2025 [Oceanus Xu (徐振洋)]  
+This project is released under the MIT License.
