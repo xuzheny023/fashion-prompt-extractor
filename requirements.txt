@@ -1,0 +1,8 @@
+streamlit
+pillow
+opencv-python
+rembg
+rembg>=2.0.56
+opencv-python
+numpy
+Pillow

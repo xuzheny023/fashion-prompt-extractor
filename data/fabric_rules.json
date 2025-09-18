@@ -1,0 +1,84 @@
+{
+  "weights": {
+    "color": 0.4,
+    "silhouette": 0.35,
+    "length": 0.25
+  },
+  "color_groups": {
+    "light": ["white", "gray", "yellow", "cyan"],
+    "mid": ["green", "blue", "purple", "orange"],
+    "dark": ["black", "red", "unknown"]
+  },
+  "rules": [
+    {
+      "fabric": "Chiffon",
+      "base": 0.6,
+      "silhouettes": ["A-line", "flare", "straight"],
+      "lengths": ["mini", "knee-length", "midi", "maxi"],
+      "preferred_colors": ["light", "mid"]
+    },
+    {
+      "fabric": "Organza",
+      "base": 0.55,
+      "silhouettes": ["A-line", "flare"],
+      "lengths": ["mini", "knee-length", "midi"],
+      "preferred_colors": ["light", "mid"]
+    },
+    {
+      "fabric": "Satin",
+      "base": 0.6,
+      "silhouettes": ["straight", "fitted", "A-line"],
+      "lengths": ["mini", "knee-length", "midi", "maxi"],
+      "preferred_colors": ["mid", "dark"]
+    },
+    {
+      "fabric": "Tulle",
+      "base": 0.55,
+      "silhouettes": ["flare", "A-line"],
+      "lengths": ["mini", "knee-length", "midi"],
+      "preferred_colors": ["light"]
+    },
+    {
+      "fabric": "Tweed",
+      "base": 0.5,
+      "silhouettes": ["straight", "fitted"],
+      "lengths": ["mini", "knee-length", "midi"],
+      "preferred_colors": ["mid", "dark"]
+    },
+    {
+      "fabric": "Denim",
+      "base": 0.5,
+      "silhouettes": ["straight", "A-line"],
+      "lengths": ["mini", "knee-length", "midi", "maxi"],
+      "preferred_colors": ["mid", "dark"]
+    },
+    {
+      "fabric": "Wool",
+      "base": 0.55,
+      "silhouettes": ["straight", "A-line"],
+      "lengths": ["knee-length", "midi", "maxi"],
+      "preferred_colors": ["mid", "dark"]
+    },
+    {
+      "fabric": "Silk",
+      "base": 0.6,
+      "silhouettes": ["straight", "fitted", "A-line"],
+      "lengths": ["mini", "knee-length", "midi", "maxi"],
+      "preferred_colors": ["mid", "light"]
+    },
+    {
+      "fabric": "Linen",
+      "base": 0.5,
+      "silhouettes": ["straight", "A-line"],
+      "lengths": ["knee-length", "midi", "maxi"],
+      "preferred_colors": ["light", "mid"]
+    },
+    {
+      "fabric": "Velvet",
+      "base": 0.55,
+      "silhouettes": ["straight", "fitted"],
+      "lengths": ["mini", "knee-length", "midi"],
+      "preferred_colors": ["dark", "mid"]
+    }
+  ]
+}
