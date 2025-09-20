@@ -1,0 +1,73 @@
+{
+  "app": {
+    "title": "AI 服装面料分析师",
+    "subtitle": "智能面料分析与推荐系统"
+  },
+  "sidebar": {
+    "language": "语言",
+    "weight_header": "打分权重",
+    "color_weight": "颜色权重",
+    "sheen_weight": "光泽权重",
+    "texture_weight": "纹理权重",
+    "exp_weight": "当前权重",
+    "save_default": "保存为默认",
+    "saved_msg": "权重保存成功！",
+    "use_fine": "使用细粒度面料库",
+    "fabric_preview": "面料库（细粒度）预览",
+    "search_placeholder": "搜索面料...",
+    "col_name": "名称",
+    "col_alias": "别名",
+    "col_sheen": "光泽范围",
+    "col_edge": "边缘范围",
+    "col_notes": "备注",
+    "no_entries": "未找到匹配的面料"
+  },
+  "main": {
+    "uploader": "上传服装图片（JPG、PNG）",
+    "file_size_warning": "⚠️ 文件大小超过20MB限制。请上传较小的图片。",
+    "processing": "🔄 正在处理图片...",
+    "attributes_title": "检测到的属性",
+    "candidates_title": "推荐面料",
+    "mask_toggle": "显示掩膜覆盖（调试）",
+    "drop_to_start": "👆 拖拽图片到这里开始分析"
+  },
+  "candidates": {
+    "score": "分数",
+    "description": "详细说明"
+  },
+  "attributes": {
+    "dominant_color": "主色调",
+    "color_hex": "色号",
+    "coverage": "覆盖率",
+    "mask_area": "掩膜区域"
+  },
+  "errors": {
+    "fine_unavailable": "细粒度规则不可用：{err}。已回退到粗粒度模式。",
+    "validation_failed": "面料规则验证失败。请检查规则文件。",
+    "upload_error": "文件上传错误。请重试。",
+    "processing_error": "图片处理错误。请尝试其他图片。"
+  },
+  "success": {
+    "image_processed": "图片处理成功！",
+    "weights_saved": "权重保存成功！"
+  },
+  "info": {
+    "waiting_upload": "等待图片上传...",
+    "select_language": "选择您的首选语言",
+    "fabric_library_error": "无法加载面料库：{error}"
+  },
+  "debug": {
+    "mask_overlay": "掩膜叠加"
+  },
+  "msg": {
+    "rules_fallback": "细粒度规则不可用，已回退到基础库",
+    "file_not_found": "找不到必需文件",
+    "json_invalid": "配置文件JSON格式无效",
+    "validation_failed": "配置验证失败",
+    "processing_error": "图片处理错误",
+    "mask_generation_failed": "图片掩膜生成失败",
+    "background_removal_failed": "背景移除失败",
+    "attribute_extraction_failed": "属性提取失败",
+    "fabric_recommendation_failed": "面料推荐失败"
+  }
+}

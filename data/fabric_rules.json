@@ -1,6 +1,8 @@
 {
   "weights": {
-    "color": 1.0
+    "color": 0.5,
+    "sheen": 0.3,
+    "texture": 0.2
   },
   "color_groups": {
     "light": [
@@ -39,7 +41,15 @@
       "preferred_colors": [
         "light",
         "mid"
-      ]
+      ],
+      "display_name": {
+        "en": "Chiffon",
+        "zh": "雪纺"
+      },
+      "notes": {
+        "en": "Lightweight, sheer fabric perfect for flowing garments",
+        "zh": "轻薄透明面料，适合流动感服装"
+      }
     },
     {
       "fabric": "Organza",
@@ -56,7 +66,15 @@
       "preferred_colors": [
         "light",
         "mid"
-      ]
+      ],
+      "display_name": {
+        "en": "Organza",
+        "zh": "欧根纱"
+      },
+      "notes": {
+        "en": "Crisp, sheer fabric ideal for structured designs",
+        "zh": "挺括透明面料，适合结构化设计"
+      }
     },
     {
       "fabric": "Satin",
@@ -75,7 +93,15 @@
       "preferred_colors": [
         "mid",
         "dark"
-      ]
+      ],
+      "display_name": {
+        "en": "Satin",
+        "zh": "缎面"
+      },
+      "notes": {
+        "en": "Smooth, lustrous fabric with elegant drape",
+        "zh": "光滑有光泽面料，优雅垂坠"
+      }
     },
     {
       "fabric": "Tulle",
@@ -91,7 +117,15 @@
       ],
       "preferred_colors": [
         "light"
-      ]
+      ],
+      "display_name": {
+        "en": "Tulle",
+        "zh": "薄纱"
+      },
+      "notes": {
+        "en": "Fine netting fabric perfect for formal wear",
+        "zh": "精细网状面料，适合正装"
+      }
     },
     {
       "fabric": "Tweed",
@@ -108,7 +142,15 @@
       "preferred_colors": [
         "mid",
         "dark"
-      ]
+      ],
+      "display_name": {
+        "en": "Tweed",
+        "zh": "花呢"
+      },
+      "notes": {
+        "en": "Textured wool fabric classic for tailored garments",
+        "zh": "纹理羊毛面料，经典定制服装"
+      }
     },
     {
       "fabric": "Denim",
@@ -126,7 +168,15 @@
       "preferred_colors": [
         "mid",
         "dark"
-      ]
+      ],
+      "display_name": {
+        "en": "Denim",
+        "zh": "牛仔布"
+      },
+      "notes": {
+        "en": "Durable cotton fabric perfect for casual wear",
+        "zh": "耐用棉面料，适合休闲装"
+      }
     },
     {
       "fabric": "Wool",
@@ -143,7 +193,15 @@
       "preferred_colors": [
         "mid",
         "dark"
-      ]
+      ],
+      "display_name": {
+        "en": "Wool",
+        "zh": "羊毛"
+      },
+      "notes": {
+        "en": "Natural wool fabric warm and comfortable",
+        "zh": "天然羊毛面料，保暖舒适"
+      }
     },
     {
       "fabric": "Silk",
@@ -162,7 +220,15 @@
       "preferred_colors": [
         "mid",
         "light"
-      ]
+      ],
+      "display_name": {
+        "en": "Silk",
+        "zh": "真丝"
+      },
+      "notes": {
+        "en": "Luxurious natural silk with excellent drape",
+        "zh": "奢华天然真丝，优异垂坠"
+      }
     },
     {
       "fabric": "Linen",
@@ -179,7 +245,15 @@
       "preferred_colors": [
         "light",
         "mid"
-      ]
+      ],
+      "display_name": {
+        "en": "Linen",
+        "zh": "亚麻"
+      },
+      "notes": {
+        "en": "Natural linen fabric perfect for summer wear",
+        "zh": "天然亚麻面料，适合夏季服装"
+      }
     },
     {
       "fabric": "Velvet",
@@ -196,7 +270,15 @@
       "preferred_colors": [
         "dark",
         "mid"
-      ]
+      ],
+      "display_name": {
+        "en": "Velvet",
+        "zh": "天鹅绒"
+      },
+      "notes": {
+        "en": "Luxurious pile fabric ideal for formal occasions",
+        "zh": "奢华绒毛面料，适合正式场合"
+      }
     }
   ]
 }

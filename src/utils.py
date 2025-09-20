@@ -33,7 +33,7 @@ def validate_fabric_rules(path: str) -> Tuple[bool, List[str]]:
     try:
         p = Path(path)
         if not p.exists():
-            errors.append(f"Rules file not found: {p}")
+            errors.append("Rules file not found")
             return False, errors
         with open(p, "r", encoding="utf-8") as f:
             fabrics: List[Dict[str, Any]] = json.load(f)
@@ -51,7 +51,7 @@ def validate_fabric_rules(path: str) -> Tuple[bool, List[str]]:
             # required keys
             required_keys = [
                 "name", "alias", "base", "weights", "lbp",
-                "gabor_mu", "gabor_sigma", "sheen_range", "edge_range", "notes"
+                "gabor_mu", "gabor_sigma", "sheen_range", "edge_range", "notes", "display_name"
             ]
             for k in required_keys:
                 if k not in item:
@@ -129,9 +129,34 @@ def validate_fabric_rules(path: str) -> Tuple[bool, List[str]]:
             _check_range("sheen_range")
             _check_range("edge_range")
 
+            # Validate display_name field
+            display_name = item.get("display_name")
+            if isinstance(display_name, dict):
+                # New localized format: {"en": "...", "zh": "..."}
+                if not display_name.get("en") or not display_name.get("zh"):
+                    errors.append(f"{ctx}.display_name must have both 'en' and 'zh' keys with non-empty values")
+                elif not isinstance(display_name.get("en"), str) or not isinstance(display_name.get("zh"), str):
+                    errors.append(f"{ctx}.display_name values must be strings")
+            elif isinstance(display_name, str):
+                # Legacy string format - still valid for backward compatibility
+                if not display_name:
+                    errors.append(f"{ctx}.display_name must be non-empty str")
+            else:
+                errors.append(f"{ctx}.display_name must be either a string or localized object with 'en' and 'zh' keys")
+
             notes = item.get("notes")
-            if not isinstance(notes, str) or not notes:
-                errors.append(f"{ctx}.notes must be non-empty str")
+            if isinstance(notes, dict):
+                # New localized format: {"en": "...", "zh": "..."}
+                if not notes.get("en") or not notes.get("zh"):
+                    errors.append(f"{ctx}.notes must have both 'en' and 'zh' keys with non-empty values")
+                elif not isinstance(notes.get("en"), str) or not isinstance(notes.get("zh"), str):
+                    errors.append(f"{ctx}.notes values must be strings")
+            elif isinstance(notes, str):
+                # Legacy string format - still valid for backward compatibility
+                if not notes:
+                    errors.append(f"{ctx}.notes must be non-empty str")
+            else:
+                errors.append(f"{ctx}.notes must be either a string or localized object with 'en' and 'zh' keys")
 
         ok = len(errors) == 0
         return ok, errors
@@ -141,7 +166,7 @@ def validate_fabric_rules(path: str) -> Tuple[bool, List[str]]:
 
 
 if __name__ == "__main__":
-    # CLI: python -m src.utils validate_rules
+    # CLI: python -m src.utils validate_rules / CLI: python -m src.utils validate_rules
     if len(sys.argv) >= 2 and sys.argv[1] == "validate_rules":
         project_root = Path(__file__).resolve().parents[1]
         rules_path = project_root / "data" / "fabric_fine_rules.json"

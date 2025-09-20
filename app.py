@@ -6,106 +6,126 @@ import numpy as np
 import cv2
 
 from src.bg_remove import get_foreground_mask
-from src.attr_extract import extract_attributes
-from src.fabric_ranker import recommend_fabrics, save_rules_weights
+from src.attr_extract import extract_attributes, localize_attrs
+from src.fabric_ranker import recommend_fabrics, save_rules_weights, recommend_fabrics_localized
 from src.utils import validate_fabric_rules
+from src.i18n import t
 from pathlib import Path
 
 # ================= 页面配置 =================
 st.set_page_config(page_title="AI Fashion Fabric Analyst", layout="centered")
 
-# ================= i18n =================
-i18n = {
-    "en": {
-        "app_title": "AI Fashion Fabric Analyst",
-        "caption": "Upload a fashion image → background mask → extract attributes → fabric suggestions",
-        "sidebar_weight_header": "Scoring Weight",
-        "color_weight": "Color weight",
-        "exp_weight": "Current weight",
-        "save_default": "Save default (fabric_rules.json)",
-        "saved_msg": "Saved! Default color weight updated.",
-        "exp_fine_preview": "Fabric library (fine-grained) preview",
-        "search": "Search",
-        "no_entries": "No entries to display.",
-        "rules_failed": "Fabric fine rules validation failed:",
-        "uploader": "Upload a fashion image",
-        "gen_mask": "Generating mask...",
-        "detected_attrs": "Detected Attributes",
-        "candidates": "Candidate Fabrics",
-        "use_fine": "Use fine-grained fabric list",
-        "fine_unavailable": "Fine rules unavailable: {err}. Falling back to coarse list.",
-        "show_mask": "Show mask overlay (debug)",
-        "drop_to_start": "Drag & drop a JPG/PNG above to start.",
-        "col_name": "name",
-        "col_alias": "alias",
-        "col_sheen": "sheen_range",
-        "col_edge": "edge_range",
-        "col_notes": "notes",
-    },
-    "zh": {
-        "app_title": "AI 服装面料分析师",
-        "caption": "上传时装图片 → 背景分割 → 提取属性 → 面料推荐",
-        "sidebar_weight_header": "打分权重",
-        "color_weight": "颜色权重",
-        "exp_weight": "当前权重",
-        "save_default": "保存默认（fabric_rules.json）",
-        "saved_msg": "已保存！默认颜色权重已更新。",
-        "exp_fine_preview": "面料库（细粒度）预览",
-        "search": "搜索",
-        "no_entries": "没有可展示的条目。",
-        "rules_failed": "细粒度面料规则校验失败：",
-        "uploader": "上传时装图片",
-        "gen_mask": "生成掩膜中...",
-        "detected_attrs": "检测到的属性",
-        "candidates": "候选面料",
-        "use_fine": "使用细粒度面料清单",
-        "fine_unavailable": "细粒度规则不可用：{err}，已回退到粗粒度列表。",
-        "show_mask": "显示掩膜覆盖（调试）",
-        "drop_to_start": "拖拽 JPG/PNG 到上方开始。",
-        "col_name": "名称",
-        "col_alias": "别名",
-        "col_sheen": "高光范围",
-        "col_edge": "边缘密度范围",
-        "col_notes": "备注",
-    },
-}
-
+# ================= 国际化配置 =================
+# Initialize language in session state with default zh
 if "lang" not in st.session_state:
-    st.session_state.lang = "zh"
+    st.session_state["lang"] = "zh"
 
-lang = st.sidebar.selectbox("Language / 语言", ("en", "zh"), index=(0 if st.session_state.lang == "en" else 1))
-st.session_state.lang = lang
-T = i18n[lang]
+# Language selector - update session state when changed
+lang_options = ("en", "zh")
+current_lang = st.session_state["lang"]
+selected_index = 0 if current_lang == "en" else 1
+
+new_lang = st.sidebar.selectbox(
+    t("sidebar.language", current_lang), 
+    lang_options, 
+    index=selected_index
+)
+
+# Update session state if language changed
+if new_lang != current_lang:
+    st.session_state["lang"] = new_lang
+
+# Get current language from session state for global use
+lang = st.session_state["lang"]
+
+
+def get_current_lang() -> str:
+    """Get current language from session state / 从会话状态获取当前语言"""
+    return st.session_state["lang"]
+
+
+def _get_localized_display_name(fabric_item: dict, lang: str) -> str:
+    """Get localized display name for fabric item / 获取面料项目的本地化显示名称"""
+    # Try display_name field first
+    display_name_data = fabric_item.get("display_name", {})
+    if isinstance(display_name_data, dict):
+        localized_name = display_name_data.get(lang, "")
+        if localized_name:
+            return localized_name
+    
+    # Fallback to alias matching
+    aliases = fabric_item.get("alias", [])
+    if aliases:
+        if lang == "zh":
+            # Look for Chinese characters
+            for alias in aliases:
+                if any('\u4e00' <= char <= '\u9fff' for char in alias):
+                    return alias
+        else:
+            # Look for English alias (no Chinese characters)
+            for alias in aliases:
+                if not any('\u4e00' <= char <= '\u9fff' for char in alias):
+                    return alias
+    
+    # Final fallback: use name
+    return fabric_item.get("name", "Unknown")
+
+
+def _get_localized_notes(fabric_item: dict, lang: str) -> str:
+    """Get localized notes for fabric item / 获取面料项目的本地化说明"""
+    # Try notes field first
+    notes_data = fabric_item.get("notes", {})
+    if isinstance(notes_data, dict):
+        localized_notes = notes_data.get(lang, "")
+        if localized_notes:
+            return localized_notes
+    elif isinstance(notes_data, str):
+        # Fallback to string notes for backward compatibility
+        return notes_data
+    
+    return ""
 
 # Validate fine fabric rules at startup
 ok, errs = validate_fabric_rules(str(Path(__file__).resolve().parents[0] / "data" / "fabric_fine_rules.json"))
 if not ok:
-    st.error(T["rules_failed"] + "\n" + "\n".join(errs))
+    st.error(t("msg.validation_failed", get_current_lang()))
 
-st.title("👗 " + T["app_title"])
-st.caption(T["caption"])
+st.title("👗 " + t("app.title", get_current_lang()))
+st.caption(t("app.subtitle", get_current_lang()))
 
 # ================= 侧边栏：权重调节 =================
-st.sidebar.header("⚙️ " + T["sidebar_weight_header"])
-w_color = st.sidebar.slider(T["color_weight"], 0.0, 1.0, 1.00, 0.01)
-weights = {"color": w_color}
+st.sidebar.header("⚙️ " + t("sidebar.weight_header", get_current_lang()))
+w_color = st.sidebar.slider(t("sidebar.color_weight", get_current_lang()), 0.0, 1.0, 0.5, 0.01)
+w_sheen = st.sidebar.slider(t("sidebar.sheen_weight", get_current_lang()), 0.0, 1.0, 0.3, 0.01)
+w_texture = st.sidebar.slider(t("sidebar.texture_weight", get_current_lang()), 0.0, 1.0, 0.2, 0.01)
 
-with st.sidebar.expander(T["exp_weight"]):
+# Auto-normalize weights to sum = 1
+total_w = max(w_color + w_sheen + w_texture, 1e-6)
+weights = {
+    "color": w_color / total_w,
+    "sheen": w_sheen / total_w,
+    "texture": w_texture / total_w,
+}
+
+with st.sidebar.expander(t("sidebar.exp_weight", get_current_lang())):
     st.write(weights)
 
-if st.sidebar.button(T["save_default"]):
+if st.sidebar.button(t("sidebar.save_default", get_current_lang())):
     save_rules_weights(weights)
-    st.sidebar.success(T["saved_msg"])
+    st.sidebar.success(t("sidebar.saved_msg", get_current_lang()))
+
+# Fine-grained fabric library switch
+use_fine = st.sidebar.checkbox(t("sidebar.use_fine", get_current_lang()), value=True)
 
 # Fine-grained fabric library preview
-with st.sidebar.expander(T["exp_fine_preview"]):
+with st.sidebar.expander(t("sidebar.fabric_preview", get_current_lang())):
     try:
         rules_path = Path(__file__).resolve().parents[0] / "data" / "fabric_fine_rules.json"
         fabrics = []
         if rules_path.exists():
             with open(rules_path, "r", encoding="utf-8") as f:
                 fabrics = json.load(f)
-        query = st.text_input(T["search"], "")
+        query = st.text_input(t("sidebar.search_placeholder", get_current_lang()), "")
         q = (query or "").strip().lower()
 
         def _match(item: dict) -> bool:
@@ -117,80 +137,127 @@ with st.sidebar.expander(T["exp_fine_preview"]):
             return q in text
 
         filt = [it for it in fabrics if _match(it)] if q else fabrics
-        col_name = T["col_name"]
-        col_alias = T["col_alias"]
-        col_sheen = T["col_sheen"]
-        col_edge = T["col_edge"]
-        col_notes = T["col_notes"]
+        col_name = t("sidebar.col_name", get_current_lang())
+        col_alias = t("sidebar.col_alias", get_current_lang())
+        col_sheen = t("sidebar.col_sheen", get_current_lang())
+        col_edge = t("sidebar.col_edge", get_current_lang())
+        col_notes = t("sidebar.col_notes", get_current_lang())
         rows = []
         for it in filt[:50]:
+            # Use localized display name and notes
+            display_name = _get_localized_display_name(it, get_current_lang())
+            notes = _get_localized_notes(it, get_current_lang())
+            
             rows.append({
-                col_name: it.get("name", ""),
+                col_name: display_name,
                 col_alias: ", ".join(it.get("alias", [])),
                 col_sheen: str(it.get("sheen_range", "")),
                 col_edge: str(it.get("edge_range", "")),
-                col_notes: it.get("notes", ""),
+                col_notes: notes,
             })
         if rows:
             st.dataframe(rows, use_container_width=True, hide_index=True)
         else:
-            st.info(T["no_entries"])
+            st.info(t("sidebar.no_entries", get_current_lang()))
     except Exception as e:
-        st.info(f"Unable to load fabric library: {e}")
+        st.info(t("msg.rules_fallback", get_current_lang()))
 
 # ================= 主功能区 =================
-uploaded_file = st.file_uploader(T["uploader"], type=["jpg", "jpeg", "png"], accept_multiple_files=False)
+uploaded_file = st.file_uploader(t("main.uploader", get_current_lang()), type=["jpg", "jpeg", "png"], accept_multiple_files=False)
 if uploaded_file is not None and getattr(uploaded_file, 'size', None) is not None:
     if uploaded_file.size > 20 * 1024 * 1024:
-        st.error("File too large. Max 20MB.")
+        st.error(t("main.file_size_warning", get_current_lang()))
         uploaded_file = None
 
 if uploaded_file:
     # 原图展示
-    image = Image.open(uploaded_file).convert("RGB")
-    st.image(image, caption=T["uploader"], use_container_width=True)
+    try:
+        image = Image.open(uploaded_file).convert("RGB")
+        st.image(image, caption=t("main.uploader", get_current_lang()), use_container_width=True)
+    except Exception as e:
+        st.error(t("msg.processing_error", get_current_lang()))
+        st.stop()
 
     # 生成 mask（内部使用，不展示）
-    with st.spinner(T["gen_mask"]):
-        mask, _ = get_foreground_mask(image)
+    with st.spinner(t("main.processing", get_current_lang())):
+        try:
+            mask, _ = get_foreground_mask(image)
+        except Exception as e:
+            st.error(t("msg.mask_generation_failed", get_current_lang()))
+            st.stop()
 
     # 属性提取
-    attrs = extract_attributes(image, mask)
-    st.markdown("### 🔍 " + T["detected_attrs"])
-    st.json(attrs)
+    try:
+        attrs = extract_attributes(image, mask)
+        st.markdown("### 🔍 " + t("main.attributes_title", get_current_lang()))
+        
+        # 显示本地化的属性
+        localized_attrs = localize_attrs(attrs, get_current_lang())
+        st.json(localized_attrs)
+    except Exception as e:
+        st.error(t("msg.attribute_extraction_failed", get_current_lang()))
+        st.stop()
 
-    use_fine = st.checkbox(T["use_fine"], value=True)
     # 面料推荐（支持 coarse/fine 源），fine 异常回退 coarse
-    st.markdown("### 🧵 " + T["candidates"])
+    st.markdown("### 🧵 " + t("main.candidates_title", get_current_lang()))
     rules_source = "fine" if use_fine else "coarse"
     try:
-        candidates = recommend_fabrics(attrs, top_k=5, weights_override=weights, rules_source=rules_source)
+        candidates = recommend_fabrics_localized(attrs, lang=get_current_lang(), top_k=5, weights_override=weights, rules_source=rules_source)
     except Exception as e:
         if rules_source == "fine":
-            st.warning(T["fine_unavailable"].format(err=e))
-            candidates = recommend_fabrics(attrs, top_k=5, weights_override=weights, rules_source="coarse")
+            st.sidebar.warning(t("msg.rules_fallback", get_current_lang()))
+            rules_source = "coarse"  # 强制回退
+            candidates = recommend_fabrics_localized(attrs, lang=get_current_lang(), top_k=5, weights_override=weights, rules_source=rules_source)
         else:
-            raise
+            st.error(t("msg.fabric_recommendation_failed", get_current_lang()))
+            st.stop()
 
-    # 渲染，若含 notes 则显示灰字摘要
+    # 渲染本地化的面料名称和说明
     for i, item in enumerate(candidates, 1):
-        if len(item) == 3:
-            name, score, notes = item
-            note_snip = (notes[:30] + "…") if isinstance(notes, str) and len(notes) > 30 else notes
-            st.write(f"{i}. {name} — **{score:.2f}**  ")
-            if note_snip:
-                st.caption(str(note_snip))
+        if len(item) == 4:
+            name, score, display_name, notes = item
+            
+            # 确保显示名称不为空，如果为空则使用本地化回退
+            if not display_name:
+                display_name = name
+            
+            # 格式化分数显示
+            score_label = t("candidates.score", get_current_lang())
+            
+            # 显示面料名称和分数
+            st.write(f"{i}. **{display_name}** — {score_label}: **{score:.2f}**")
+            
+            # 显示详细说明（截断处理）
+            if notes and isinstance(notes, str) and notes.strip():
+                # 截断到30字符左右，保持完整性
+                max_len = 30
+                if len(notes) > max_len:
+                    # 找到最近的句号或逗号作为截断点
+                    truncate_point = max_len
+                    for punct in ['。', '.', '，', ',', '；', ';']:
+                        punct_pos = notes.find(punct, 0, max_len)
+                        if punct_pos > 0:
+                            truncate_point = punct_pos + 1
+                            break
+                    note_snip = notes[:truncate_point] + "…"
+                else:
+                    note_snip = notes
+                
+                desc_label = t("candidates.description", get_current_lang())
+                st.caption(f"*{desc_label}: {note_snip}*")
         else:
-            name, score = item
-            st.write(f"{i}. {name} — **{score:.2f}**")
+            # Fallback for unexpected format
+            name, score = item[:2]
+            score_label = t("candidates.score", get_current_lang())
+            st.write(f"{i}. **{name}** — {score_label}: **{score:.2f}**")
 
     # 可选：调试开关，叠加 mask 预览
-    if st.toggle(T["show_mask"]):
+    if st.toggle(t("main.mask_toggle", get_current_lang())):
         overlay = np.array(image).copy()
         over = overlay.copy()
         over[mask > 0] = (255, 0, 0)  # 红色标记前景
         preview = cv2.addWeighted(overlay, 0.7, over, 0.3, 0)
-        st.image(preview, caption="Mask Overlay", use_container_width=True)
+        st.image(preview, caption=t("debug.mask_overlay", get_current_lang()), use_container_width=True)
 
 else:
-    st.info(T["drop_to_start"])
+    st.info(t("main.drop_to_start", get_current_lang()))
