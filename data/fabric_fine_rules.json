@@ -32,7 +32,12 @@
     "notes": {
       "en": "High sheen, smooth drape; luxurious silk fabric with excellent draping qualities",
       "zh": "高光泽度，垂坠感佳；奢华真丝面料，具有优异的垂坠特性"
-    }
+    },
+    "suitable_structures": [
+      "collar",
+      "bodice",
+      "skirt"
+    ]
   },
   {
     "name": "silk_crepe",
@@ -67,7 +72,12 @@
     "display_name": {
       "en": "Silk Crepe",
       "zh": "真丝绉"
-    }
+    },
+    "suitable_structures": [
+      "bodice",
+      "sleeve",
+      "skirt"
+    ]
   },
   {
     "name": "georgette",
@@ -102,7 +112,11 @@
     "display_name": {
       "en": "Georgette",
       "zh": "乔其纱"
-    }
+    },
+    "suitable_structures": [
+      "sleeve",
+      "bodice"
+    ]
   },
   {
     "name": "satin_polyester",
@@ -137,7 +151,12 @@
     "display_name": {
       "en": "Polyester Satin",
       "zh": "涤纶缎"
-    }
+    },
+    "suitable_structures": [
+      "collar",
+      "bodice",
+      "skirt"
+    ]
   },
   {
     "name": "organza",
@@ -172,7 +191,11 @@
     "display_name": {
       "en": "Organza",
       "zh": "欧根纱"
-    }
+    },
+    "suitable_structures": [
+      "sleeve",
+      "bodice"
+    ]
   },
   {
     "name": "chiffon",
@@ -207,7 +230,11 @@
     "display_name": {
       "en": "Chiffon",
       "zh": "雪纺"
-    }
+    },
+    "suitable_structures": [
+      "sleeve",
+      "bodice"
+    ]
   },
   {
     "name": "tulle",
@@ -242,7 +269,11 @@
     "display_name": {
       "en": "Tulle",
       "zh": "薄纱"
-    }
+    },
+    "suitable_structures": [
+      "sleeve",
+      "bodice"
+    ]
   },
   {
     "name": "tweed_boucle",
@@ -277,7 +308,12 @@
     "display_name": {
       "en": "Tweed Bouclé",
       "zh": "花呢"
-    }
+    },
+    "suitable_structures": [
+      "coat",
+      "bodice",
+      "skirt"
+    ]
   },
   {
     "name": "denim_twill",
@@ -312,7 +348,12 @@
     "display_name": {
       "en": "Denim Twill",
       "zh": "牛仔布"
-    }
+    },
+    "suitable_structures": [
+      "pants",
+      "skirt",
+      "coat"
+    ]
   },
   {
     "name": "corduroy_wale14",
@@ -347,7 +388,12 @@
     "display_name": {
       "en": "Corduroy (14 Wale)",
       "zh": "灯芯绒（14条）"
-    }
+    },
+    "suitable_structures": [
+      "pants",
+      "skirt",
+      "coat"
+    ]
   },
   {
     "name": "lace_flower",
@@ -382,7 +428,11 @@
     "display_name": {
       "en": "Floral Lace",
       "zh": "蕾丝花边"
-    }
+    },
+    "suitable_structures": [
+      "sleeve",
+      "bodice"
+    ]
   },
   {
     "name": "velvet",
@@ -417,7 +467,12 @@
     "display_name": {
       "en": "Velvet",
       "zh": "天鹅绒"
-    }
+    },
+    "suitable_structures": [
+      "collar",
+      "bodice",
+      "skirt"
+    ]
   },
   {
     "name": "leather_smooth",
@@ -452,7 +507,12 @@
     "display_name": {
       "en": "Smooth Leather",
       "zh": "光面皮"
-    }
+    },
+    "suitable_structures": [
+      "bodice",
+      "skirt",
+      "pants"
+    ]
   },
   {
     "name": "suede",
@@ -487,7 +547,12 @@
     "display_name": {
       "en": "Suede",
       "zh": "麂皮"
-    }
+    },
+    "suitable_structures": [
+      "bodice",
+      "skirt",
+      "pants"
+    ]
   },
   {
     "name": "linen_plain",
@@ -522,7 +587,12 @@
     "display_name": {
       "en": "Plain Linen",
       "zh": "平纹亚麻"
-    }
+    },
+    "suitable_structures": [
+      "bodice",
+      "sleeve",
+      "pants"
+    ]
   },
   {
     "name": "wool_suiting",
@@ -557,6 +627,11 @@
     "display_name": {
       "en": "Wool Suiting",
       "zh": "西装料"
-    }
+    },
+    "suitable_structures": [
+      "coat",
+      "bodice",
+      "pants"
+    ]
   }
 ]

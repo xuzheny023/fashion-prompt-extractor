@@ -42,6 +42,8 @@ def validate_fabric_rules(path: str) -> Tuple[bool, List[str]]:
             return False, errors
 
         names_seen: set[str] = set()
+        # Also track optional 'key' for packs-merged schemas; warn on duplicates
+        keys_seen: Dict[str, int] = {}
         for idx, item in enumerate(fabrics):
             ctx = f"[{idx}]"
             if not isinstance(item, dict):
@@ -51,7 +53,7 @@ def validate_fabric_rules(path: str) -> Tuple[bool, List[str]]:
             # required keys
             required_keys = [
                 "name", "alias", "base", "weights", "lbp",
-                "gabor_mu", "gabor_sigma", "sheen_range", "edge_range", "notes", "display_name"
+                "gabor_mu", "gabor_sigma", "sheen_range", "edge_range", "notes", "display_name", "suitable_structures"
             ]
             for k in required_keys:
                 if k not in item:
@@ -64,6 +66,15 @@ def validate_fabric_rules(path: str) -> Tuple[bool, List[str]]:
                 if name in names_seen:
                     errors.append(f"duplicate name: {name}")
                 names_seen.add(name)
+
+            # Packs schema: prefer 'key' as unique id when present; warn if duplicates
+            k = str(item.get("key") or item.get("name") or "").strip()
+            if k:
+                if k in keys_seen:
+                    import warnings
+                    warnings.warn(f"duplicate key '{k}' detected between entries {keys_seen[k]} and {idx}; later one will override when merging")
+                else:
+                    keys_seen[k] = idx
 
             alias = item.get("alias")
             if not isinstance(alias, list) or not all(isinstance(a, str) for a in alias):
@@ -158,12 +169,42 @@ def validate_fabric_rules(path: str) -> Tuple[bool, List[str]]:
             else:
                 errors.append(f"{ctx}.notes must be either a string or localized object with 'en' and 'zh' keys")
 
+            # Validate suitable_structures field
+            valid_structures = {"collar", "sleeve", "buttons", "pants", "skirt", "pocket", "belt", "bodice", "coat"}
+            suitable_structures = item.get("suitable_structures")
+            if isinstance(suitable_structures, list):
+                for struct in suitable_structures:
+                    if not isinstance(struct, str):
+                        errors.append(f"{ctx}.suitable_structures must contain only strings")
+                        break
+                    elif struct not in valid_structures:
+                        # Warning for unknown values, don't interrupt validation
+                        import warnings
+                        warnings.warn(f"Unknown structure '{struct}' in {ctx}.suitable_structures. Valid values: {valid_structures}")
+            elif suitable_structures is None:
+                # Default to all suitable if missing (backward compatibility)
+                pass
+            else:
+                errors.append(f"{ctx}.suitable_structures must be a list of strings or null")
+
         ok = len(errors) == 0
         return ok, errors
     except Exception as e:
         errors.append(f"exception: {e}")
         return False, errors
 
+
+def get_note_text(item: Dict[str, Any], lang: str) -> str:
+    """
+    Get localized note text from a fabric item.
+    Supports both legacy string and localized dict formats.
+    """
+    notes = item.get("notes", "")
+    if isinstance(notes, dict):
+        return str(notes.get(lang, "") or notes.get("en", "") or notes.get("zh", ""))
+    if isinstance(notes, str):
+        return notes
+    return ""
 
 if __name__ == "__main__":
     # CLI: python -m src.utils validate_rules / CLI: python -m src.utils validate_rules

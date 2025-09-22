@@ -108,12 +108,21 @@ def extract_attributes(image: Image.Image, mask: np.ndarray) -> Dict:
     color_hex = _rgb_to_hex(dom_rgb)
 
     coverage = _mask_area_ratio(mask)
+    # Robust defaults for sheen/texture related placeholders
+    # 提供稳健的光泽/纹理占位，避免为0引发分数畸变
+    sheen_proxy = max(0.1, min(0.9, coverage))
+    texture_proxy = 1.0 - abs(coverage - 0.5) * 2.0  # peak at 0.5
+    texture_proxy = float(max(0.1, min(0.9, texture_proxy)))
 
     return {
         "visual": {
             "dominant_color_name": color_name,
             "dominant_color_hex": color_hex,
             "coverage_ratio": round(coverage, 4),
+            # Placeholders that downstream scorers may use
+            # 供下游打分使用的占位特征
+            "sheen_proxy": round(float(sheen_proxy), 4),
+            "texture_proxy": round(float(texture_proxy), 4),
         }
     }
 

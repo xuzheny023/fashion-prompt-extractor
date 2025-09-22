@@ -35,4 +35,25 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
+## 👨‍💻 Developer Guide | 开发者指南
+- Formatting: run Black/Isort/Ruff (configured in `pyproject.toml`, line width 100)
+  - black . && isort . && ruff check .
+- Encoding tools:
+  - Scan non-UTF8 files: `python scripts/scan_non_utf8.py`
+  - Convert to UTF-8: `python scripts/convert_to_utf8.py "locales/*.json" "data/**/*.json"`
+ - Smoke test pipeline: `python scripts/smoke_run.py`
+
 © 2025 [Oceanus Xu (徐振祥)] - Released under MIT License
+
+## Extend with New Fabric Classes
+
+- Add your new fabric keys into any JSON under `rules/packs/` (or prepare a list).
+- Generate a starter pack with defaults:
+
+```bash
+python scripts/make_rule_skeleton.py --family sheens --out sheens_auto.json
+```
+
+- Fill in `display_name` (en/zh) and `notes` manually in the generated file.
+- Merge and preview: enable “Use rule packs (merged)” in the sidebar.
+- Evaluate quality on the “Evaluate Labeled Patches” page.

@@ -49,7 +49,11 @@
       "notes": {
         "en": "Lightweight, sheer fabric perfect for flowing garments",
         "zh": "轻薄透明面料，适合流动感服装"
-      }
+      },
+      "suitable_structures": [
+        "sleeve",
+        "bodice"
+      ]
     },
     {
       "fabric": "Organza",
@@ -74,7 +78,18 @@
       "notes": {
         "en": "Crisp, sheer fabric ideal for structured designs",
         "zh": "挺括透明面料，适合结构化设计"
-      }
+      },
+      "suitable_structures": [
+        "collar",
+        "sleeve",
+        "buttons",
+        "pants",
+        "skirt",
+        "pocket",
+        "belt",
+        "bodice",
+        "coat"
+      ]
     },
     {
       "fabric": "Satin",
@@ -101,7 +116,12 @@
       "notes": {
         "en": "Smooth, lustrous fabric with elegant drape",
         "zh": "光滑有光泽面料，优雅垂坠"
-      }
+      },
+      "suitable_structures": [
+        "collar",
+        "bodice",
+        "skirt"
+      ]
     },
     {
       "fabric": "Tulle",
@@ -125,7 +145,18 @@
       "notes": {
         "en": "Fine netting fabric perfect for formal wear",
         "zh": "精细网状面料，适合正装"
-      }
+      },
+      "suitable_structures": [
+        "collar",
+        "sleeve",
+        "buttons",
+        "pants",
+        "skirt",
+        "pocket",
+        "belt",
+        "bodice",
+        "coat"
+      ]
     },
     {
       "fabric": "Tweed",
@@ -150,7 +181,18 @@
       "notes": {
         "en": "Textured wool fabric classic for tailored garments",
         "zh": "纹理羊毛面料，经典定制服装"
-      }
+      },
+      "suitable_structures": [
+        "collar",
+        "sleeve",
+        "buttons",
+        "pants",
+        "skirt",
+        "pocket",
+        "belt",
+        "bodice",
+        "coat"
+      ]
     },
     {
       "fabric": "Denim",
@@ -176,7 +218,12 @@
       "notes": {
         "en": "Durable cotton fabric perfect for casual wear",
         "zh": "耐用棉面料，适合休闲装"
-      }
+      },
+      "suitable_structures": [
+        "pants",
+        "skirt",
+        "coat"
+      ]
     },
     {
       "fabric": "Wool",
@@ -201,7 +248,12 @@
       "notes": {
         "en": "Natural wool fabric warm and comfortable",
         "zh": "天然羊毛面料，保暖舒适"
-      }
+      },
+      "suitable_structures": [
+        "coat",
+        "bodice",
+        "pants"
+      ]
     },
     {
       "fabric": "Silk",
@@ -228,7 +280,13 @@
       "notes": {
         "en": "Luxurious natural silk with excellent drape",
         "zh": "奢华天然真丝，优异垂坠"
-      }
+      },
+      "suitable_structures": [
+        "collar",
+        "bodice",
+        "skirt",
+        "sleeve"
+      ]
     },
     {
       "fabric": "Linen",
@@ -253,7 +311,12 @@
       "notes": {
         "en": "Natural linen fabric perfect for summer wear",
         "zh": "天然亚麻面料，适合夏季服装"
-      }
+      },
+      "suitable_structures": [
+        "bodice",
+        "sleeve",
+        "pants"
+      ]
     },
     {
       "fabric": "Velvet",
@@ -278,7 +341,12 @@
       "notes": {
         "en": "Luxurious pile fabric ideal for formal occasions",
         "zh": "奢华绒毛面料，适合正式场合"
-      }
+      },
+      "suitable_structures": [
+        "collar",
+        "bodice",
+        "skirt"
+      ]
     }
   ]
 }

@@ -59,6 +59,46 @@
   "debug": {
     "mask_overlay": "Mask Overlay"
   },
+  "region": {
+    "section_title": "Region Query",
+    "unavailable": "Region index is not available.",
+    "click_to_query": "Click the image to query Top-K fabrics in that region.",
+    "capture_failed": "Unable to capture click, please input coordinates manually.",
+    "input_x": "X coordinate",
+    "input_y": "Y coordinate",
+    "coords_label": "Coordinates: ({x}, {y})",
+    "no_region": "No region found at this position.",
+    "topk_title": "Top-K recommendations for region #{rid}",
+    "explain": "Color: {color}, Coverage: {coverage}",
+    "heatmap_toggle": "Show fabric confidence heatmap",
+    "alpha_label": "Heatmap alpha",
+    "boundary_toggle": "Show region boundaries",
+    "slic_fallback": "SLIC unavailable, falling back to grid segmentation.",
+    "out_of_fg": "Point is outside foreground, please click on garment area."
+  },
+  "controls": {
+    "resegment": "Re-segment"
+  },
+  "ui": {
+    "hybrid": {
+      "title": "Local refinement",
+      "enabled": "Enable local refinement",
+      "radius": "Local window radius",
+      "alpha": "Fusion alpha",
+      "tip_cached": "Using cached region features; local recompute not triggered.",
+      "tip_refined": "Local window refined and fused with region score."
+    },
+    "click": {
+      "hint": "Click the image to select a position.",
+      "fallback": "Clickable component not installed. Please install dependencies and retry.",
+      "use_canvas": "streamlit-image-coordinates not installed, using drawable-canvas to capture clicks.",
+      "not_in_region": "The clicked point is not within a valid region."
+    },
+    "status": {
+      "loading": "Processing...",
+      "ready": "✅ Ready"
+    }
+  },
   "msg": {
     "rules_fallback": "Fine-grained rules unavailable, falling back to basic library",
     "file_not_found": "Required file not found",

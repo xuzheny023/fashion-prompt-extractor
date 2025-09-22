@@ -59,6 +59,46 @@
   "debug": {
     "mask_overlay": "掩膜叠加"
   },
+  "region": {
+    "section_title": "区域查询",
+    "unavailable": "区域索引不可用。",
+    "click_to_query": "点击图片以查询该区域的 Top-K 面料。",
+    "capture_failed": "无法捕捉点击，临时用手动输入坐标。",
+    "input_x": "X 坐标",
+    "input_y": "Y 坐标",
+    "coords_label": "坐标：({x}, {y})",
+    "no_region": "当前位置未找到区域。",
+    "topk_title": "区域 #{rid} 的 Top-K 推荐",
+    "explain": "颜色：{color}，覆盖率：{coverage}",
+    "heatmap_toggle": "显示面料置信度热力图",
+    "alpha_label": "热力图透明度",
+    "boundary_toggle": "显示区域边界",
+    "slic_fallback": "SLIC 不可用，已回退到网格分割。",
+    "out_of_fg": "点击点在前景外，请点击服装区域。"
+  },
+  "controls": {
+    "resegment": "重新分区"
+  },
+  "ui": {
+    "hybrid": {
+      "title": "局部细化",
+      "enabled": "启用局部细化",
+      "radius": "局部窗口半径",
+      "alpha": "融合系数",
+      "tip_cached": "使用缓存的区域特征，未触发局部重算。",
+      "tip_refined": "已对局部窗口细化并与区域分数融合。"
+    },
+    "click": {
+      "hint": "点击图片以选择位置；组件不可用时将回退到手动输入。",
+      "fallback": "未安装可点击组件，请安装依赖后重试。",
+      "use_canvas": "未安装 streamlit-image-coordinates，正使用 drawable-canvas 捕获点击。",
+      "not_in_region": "当前点不在有效区域内。"
+    },
+    "status": {
+      "loading": "处理中 / Processing...",
+      "ready": "✅ 就绪 / Ready"
+    }
+  },
   "msg": {
     "rules_fallback": "细粒度规则不可用，已回退到基础库",
     "file_not_found": "找不到必需文件",

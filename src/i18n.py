@@ -3,10 +3,13 @@
 Internationalization (i18n) support for the fashion fabric analyzer
 国际化支持模块，用于服装面料分析器
 """
-import json
 from functools import lru_cache
 from pathlib import Path
 from typing import Dict, Any
+try:
+    from src.xutils.io import read_json_smart
+except Exception:
+    from src.utils.io import read_json_smart  # type: ignore
 
 
 # Base directory for locale files / 本地化文件基础目录
@@ -32,9 +35,7 @@ def load_locale(lang: str) -> Dict[str, Any]:
     
     if not locale_path.exists():
         raise FileNotFoundError(f"Locale file not found: {locale_path}")
-    
-    with open(locale_path, 'r', encoding='utf-8') as f:
-        return json.load(f)
+    return read_json_smart(locale_path)
 
 
 def t(key: str, lang: str, **kwargs) -> str:
@@ -56,11 +57,11 @@ def t(key: str, lang: str, **kwargs) -> str:
     try:
         # Try to load the requested language / 尝试加载请求的语言
         locale_data = load_locale(lang)
-    except (FileNotFoundError, json.JSONDecodeError):
+    except Exception:
         # Fallback to English if requested language fails / 如果请求语言失败，回退到英文
         try:
             locale_data = load_locale('en')
-        except (FileNotFoundError, json.JSONDecodeError):
+        except Exception:
             # Final fallback: return the key itself / 最终回退：返回键本身
             return key
     
