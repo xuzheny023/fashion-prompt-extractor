@@ -7,7 +7,7 @@
     "language": "Language",
     "weight_header": "Scoring Weights",
     "color_weight": "Color Weight",
-    "sheen_weight": "Sheen Weight", 
+    "sheen_weight": "Sheen Weight",
     "texture_weight": "Texture Weight",
     "exp_weight": "Current Weights",
     "save_default": "Save as Default",
@@ -24,12 +24,12 @@
   },
   "main": {
     "uploader": "Upload a fashion image (JPG, PNG)",
-    "file_size_warning": "⚠️ File size exceeds 20MB limit. Please upload a smaller image.",
-    "processing": "🔄 Processing image...",
+    "file_size_warning": "閳跨媴绗?File size exceeds 20MB limit. Please upload a smaller image.",
+    "processing": "棣冩敡 Processing image...",
     "attributes_title": "Detected Attributes",
     "candidates_title": "Recommended Fabrics",
     "mask_toggle": "Show Mask Overlay (Debug)",
-    "drop_to_start": "👆 Drop an image here to start analysis"
+    "drop_to_start": "棣冩啘 Drop an image here to start analysis"
   },
   "candidates": {
     "score": "Score",
@@ -96,7 +96,7 @@
     },
     "status": {
       "loading": "Processing...",
-      "ready": "✅ Ready"
+      "ready": "閴?Ready"
     }
   },
   "msg": {

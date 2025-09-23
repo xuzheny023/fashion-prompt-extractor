@@ -36,8 +36,20 @@ streamlit run app.py
 ```
 
 ## 👨‍💻 Developer Guide | 开发者指南
-- Formatting: run Black/Isort/Ruff (configured in `pyproject.toml`, line width 100)
-  - black . && isort . && ruff check .
+- Formatting: run Black/Ruff before commit (configured in `pyproject.toml`, line width 100)
+  - black . && ruff check .
+  - Safety note: Always generate complete try/except blocks with at least one indented statement; do not leave `try:` empty.
+  - On Windows, you can add a pre-commit step via a local git hook:
+    - Create `.git/hooks/pre-commit` (no extension) with the following content:
+      
+      ```bash
+      #!/usr/bin/env bash
+      set -e
+      black .
+      ruff check .
+      ```
+      
+    - Make it executable on Unix-like systems: `chmod +x .git/hooks/pre-commit`
 - Encoding tools:
   - Scan non-UTF8 files: `python scripts/scan_non_utf8.py`
   - Convert to UTF-8: `python scripts/convert_to_utf8.py "locales/*.json" "data/**/*.json"`

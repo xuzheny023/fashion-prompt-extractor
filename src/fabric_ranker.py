@@ -1,12 +1,13 @@
+# -*- coding: utf-8 -*-
 # src/fabric_ranker.py
 # -*- coding: utf-8 -*-
 """
 3D fabric scoring framework: Color + Sheen + Texture
-三维面料打分框架：颜色 + 光泽度 + 纹理
+涓夌淮闈㈡枡鎵撳垎妗嗘灦锛氶鑹?+ 鍏夋辰搴?+ 绾圭悊
 - Read data/fabric_rules.json (use built-in defaults if not exists)
-- 读取 data/fabric_rules.json（若不存在使用内置默认）
+- 璇诲彇 data/fabric_rules.json锛堣嫢涓嶅瓨鍦ㄤ娇鐢ㄥ唴缃粯璁わ級
 - Score based on color similarity, sheen characteristics, and texture features
-- 基于颜色相似度、光泽特征和纹理特征打分
+- 鍩轰簬棰滆壊鐩镐技搴︺€佸厜娉界壒寰佸拰绾圭悊鐗瑰緛鎵撳垎
 """
 
 from __future__ import annotations
@@ -29,7 +30,7 @@ FINE_RULES_PATH = PROJECT_ROOT / "data" / "fabric_fine_rules.json"
 def _load_rules() -> Dict:
     if RULES_PATH.exists():
         return read_json_smart(RULES_PATH)
-    # Fallback defaults / 兜底
+    # Fallback defaults / 鍏滃簳
     return {
         "weights": {"color": 0.5, "sheen": 0.3, "texture": 0.2},
         "color_groups": {
@@ -69,7 +70,7 @@ def _map_color_to_group(color_name: str, color_groups: Dict[str, List[str]]) -> 
 
 
 def _color_score(attrs: Dict, rule: Dict) -> float:
-    """Calculate color similarity score / 计算颜色相似度得分"""
+    """Calculate color similarity score / 璁＄畻棰滆壊鐩镐技搴﹀緱鍒?""
     try:
         vis = attrs.get("visual", {})
         color_name = vis.get("dominant_color_name", "unknown")
@@ -78,14 +79,14 @@ def _color_score(attrs: Dict, rule: Dict) -> float:
             "mid": ["green", "blue", "purple", "orange"],
             "dark": ["black", "red", "unknown"]
         }
-        
+
         # Map color to group
         color_group = "dark"
         for group, names in color_groups.items():
             if color_name in names:
                 color_group = group
                 break
-        
+
         # Check preferred colors
         preferred = rule.get("preferred_colors", [])
         if color_group in preferred:
@@ -99,12 +100,12 @@ def _color_score(attrs: Dict, rule: Dict) -> float:
 
 
 def _sheen_score(attrs: Dict, rule: Dict) -> float:
-    """Calculate sheen characteristics score / 计算光泽特征得分"""
+    """Calculate sheen characteristics score / 璁＄畻鍏夋辰鐗瑰緛寰楀垎"""
     try:
         # For now, use coverage ratio as a proxy for sheen (higher coverage = more reflective)
-        # 暂时用覆盖度作为光泽度的代理指标（覆盖度越高越反光）
+        # 鏆傛椂鐢ㄨ鐩栧害浣滀负鍏夋辰搴︾殑浠ｇ悊鎸囨爣锛堣鐩栧害瓒婇珮瓒婂弽鍏夛級
         coverage = attrs.get("visual", {}).get("coverage_ratio", 0.5)
-        
+
         # Check if coverage falls within expected sheen range
         sheen_range = rule.get("sheen_range", [0.0, 1.0])
         if len(sheen_range) == 2:
@@ -115,31 +116,31 @@ def _sheen_score(attrs: Dict, rule: Dict) -> float:
                 # Distance-based penalty
                 dist = min(abs(coverage - min_sheen), abs(coverage - max_sheen))
                 return max(0.0, 1.0 - dist * 2)
-        
+
         return 0.5
     except:
         return 0.5
 
 
 def _texture_score(attrs: Dict, rule: Dict) -> float:
-    """Calculate texture complexity score / 计算纹理复杂度得分"""
+    """Calculate texture complexity score / 璁＄畻绾圭悊澶嶆潅搴﹀緱鍒?""
     try:
         # Use texture complexity from rule if available
         texture_complexity = rule.get("texture_complexity", 0.5)
-        
+
         # For coarse rules, use edge_range as texture indicator
         edge_range = rule.get("edge_range", [0.1, 0.5])
         if len(edge_range) == 2:
             # Use coverage as texture proxy (higher coverage = more texture)
             coverage = attrs.get("visual", {}).get("coverage_ratio", 0.5)
             min_edge, max_edge = edge_range
-            
+
             if min_edge <= coverage <= max_edge:
                 return 1.0
             else:
                 dist = min(abs(coverage - min_edge), abs(coverage - max_edge))
                 return max(0.0, 1.0 - dist * 2)
-        
+
         return texture_complexity
     except:
         return 0.5
@@ -151,17 +152,17 @@ def _component_scores(attrs: Dict, rule: Dict) -> Tuple[float, float, float]:
 
 
 def _score_one_3d(rule: Dict, attrs: Dict, weights: Dict[str, float]) -> float:
-    """3D scoring: color + sheen + texture / 三维打分：颜色+光泽+纹理"""
+    """3D scoring: color + sheen + texture / 涓夌淮鎵撳垎锛氶鑹?鍏夋辰+绾圭悊"""
     base_score = rule.get("base", 0.5)
-    
+
     color_score = _color_score(attrs, rule)
     sheen_score = _sheen_score(attrs, rule)
     texture_score = _texture_score(attrs, rule)
-    
+
     w_color = weights.get("color", 0.5)
     w_sheen = weights.get("sheen", 0.3)
     w_texture = weights.get("texture", 0.2)
-    
+
     total_score = base_score + w_color * color_score + w_sheen * sheen_score + w_texture * texture_score
     return float(total_score)
 
@@ -170,9 +171,9 @@ def recommend_fabrics(attrs: Dict, top_k: int = 5, weights_override: Dict[str, f
                       rules_source: str = "coarse") -> List[Tuple[str, float] | Tuple[str, float, str]]:
     """
     3D scoring output: [(fabric_name, score), ...] or [(fabric_name, score, notes), ...] in descending order
-    三维打分输出：[(fabric_name, score), ...] 或 [(fabric_name, score, notes), ...] 降序
+    涓夌淮鎵撳垎杈撳嚭锛歔(fabric_name, score), ...] 鎴?[(fabric_name, score, notes), ...] 闄嶅簭
     weights_override: {"color": 0.5, "sheen": 0.3, "texture": 0.2}, overrides weights in JSON if provided
-    weights_override: {"color": 0.5, "sheen": 0.3, "texture": 0.2}，若提供则覆盖 JSON 中的权重
+    weights_override: {"color": 0.5, "sheen": 0.3, "texture": 0.2}锛岃嫢鎻愪緵鍒欒鐩?JSON 涓殑鏉冮噸
     """
     rules_obj = _load_rules()
 
@@ -375,8 +376,7 @@ def rank_fabrics_by_structures(
 def save_rules_weights(new_weights: Dict[str, float]) -> None:
     """
     Write weights back to data/fabric_rules.json and clear cache (3D weights)
-    将权重写回 data/fabric_rules.json，并清空缓存。（三维权重）
-    """
+    灏嗘潈閲嶅啓鍥?data/fabric_rules.json锛屽苟娓呯┖缂撳瓨銆傦紙涓夌淮鏉冮噸锛?    """
     rules_obj = _load_rules().copy()
     rules_obj["weights"] = {
         "color": float(new_weights.get("color", 0.5)),
@@ -394,20 +394,18 @@ def save_rules_weights(new_weights: Dict[str, float]) -> None:
 def localize_fabric(rule_or_name: Union[Dict, str], lang: str) -> Tuple[str, str]:
     """
     Get localized display name and notes for a fabric rule or name
-    获取面料规则或名称的本地化显示名称和说明
-    
+    鑾峰彇闈㈡枡瑙勫垯鎴栧悕绉扮殑鏈湴鍖栨樉绀哄悕绉板拰璇存槑
+
     Args:
-        rule_or_name: Either a fabric rule dict or fabric name string / 面料规则字典或面料名称字符串
-        lang: Language code ('en' or 'zh') / 语言代码（'en' 或 'zh'）
-    
+        rule_or_name: Either a fabric rule dict or fabric name string / 闈㈡枡瑙勫垯瀛楀吀鎴栭潰鏂欏悕绉板瓧绗︿覆
+        lang: Language code ('en' or 'zh') / 璇█浠ｇ爜锛?en' 鎴?'zh'锛?
     Returns:
-        Tuple of (display_name, notes) / 返回（显示名称，说明）元组
-    """
+        Tuple of (display_name, notes) / 杩斿洖锛堟樉绀哄悕绉帮紝璇存槑锛夊厓缁?    """
     try:
         if isinstance(rule_or_name, str):
             # Try to find the rule by name
             fabric_name = rule_or_name
-            
+
             # Try fine rules first
             try:
                 fine_rules = _load_rules_fine()
@@ -416,20 +414,20 @@ def localize_fabric(rule_or_name: Union[Dict, str], lang: str) -> Tuple[str, str
                         return _extract_localized_fields(rule, lang)
             except:
                 pass
-            
+
             # Try coarse rules
             coarse_rules = _load_rules()
             for rule in coarse_rules.get("rules", []):
                 if rule.get("fabric") == fabric_name:
                     return _extract_localized_fields(rule, lang)
-            
+
             # Fallback: return the name itself
             return fabric_name, ""
-        
+
         else:
             # Direct rule object
             return _extract_localized_fields(rule_or_name, lang)
-    
+
     except Exception:
         # Ultimate fallback
         name = rule_or_name.get("name", rule_or_name.get("fabric", "Unknown")) if isinstance(rule_or_name, dict) else str(rule_or_name)
@@ -439,15 +437,13 @@ def localize_fabric(rule_or_name: Union[Dict, str], lang: str) -> Tuple[str, str
 def _extract_localized_fields(rule: Dict, lang: str) -> Tuple[str, str]:
     """
     Extract localized display_name and notes from a rule
-    从规则中提取本地化的显示名称和说明
-    
+    浠庤鍒欎腑鎻愬彇鏈湴鍖栫殑鏄剧ず鍚嶇О鍜岃鏄?
     Args:
-        rule: Fabric rule dictionary / 面料规则字典
-        lang: Language code / 语言代码
-    
+        rule: Fabric rule dictionary / 闈㈡枡瑙勫垯瀛楀吀
+        lang: Language code / 璇█浠ｇ爜
+
     Returns:
-        Tuple of (display_name, notes) / 返回（显示名称，说明）元组
-    """
+        Tuple of (display_name, notes) / 杩斿洖锛堟樉绀哄悕绉帮紝璇存槑锛夊厓缁?    """
     # Extract display name
     display_name = _get_localized_field(rule, "display_name", lang)
     if not display_name:
@@ -467,65 +463,60 @@ def _extract_localized_fields(rule: Dict, lang: str) -> Tuple[str, str]:
                     if not any('\u4e00' <= char <= '\u9fff' for char in alias):
                         display_name = alias
                         break
-        
+
         # Final fallback: use name or fabric field
         if not display_name:
             display_name = rule.get("name", rule.get("fabric", "Unknown"))
-    
+
     # Extract notes
     notes = _get_localized_field(rule, "notes", lang)
     if not notes and isinstance(rule.get("notes"), str):
         # Fallback to string notes
         notes = rule.get("notes", "")
-    
+
     return display_name, notes
 
 
 def _get_localized_field(rule: Dict, field: str, lang: str) -> str:
     """
     Get localized field value from rule
-    从规则中获取本地化字段值
-    
+    浠庤鍒欎腑鑾峰彇鏈湴鍖栧瓧娈靛€?
     Args:
-        rule: Fabric rule dictionary / 面料规则字典
-        field: Field name ('display_name' or 'notes') / 字段名称
-        lang: Language code / 语言代码
-    
+        rule: Fabric rule dictionary / 闈㈡枡瑙勫垯瀛楀吀
+        field: Field name ('display_name' or 'notes') / 瀛楁鍚嶇О
+        lang: Language code / 璇█浠ｇ爜
+
     Returns:
-        Localized field value or empty string / 本地化字段值或空字符串
+        Localized field value or empty string / 鏈湴鍖栧瓧娈靛€兼垨绌哄瓧绗︿覆
     """
     field_data = rule.get(field, {})
-    
+
     if isinstance(field_data, dict):
         # New localized format: {"en": "...", "zh": "..."}
         return field_data.get(lang, "")
     elif isinstance(field_data, str):
         # Old string format: keep for backward compatibility
         return field_data
-    
+
     return ""
 
 
-def recommend_fabrics_localized(attrs: Dict, lang: str = "en", top_k: int = 5, 
+def recommend_fabrics_localized(attrs: Dict, lang: str = "en", top_k: int = 5,
                                weights_override: Dict[str, float] | None = None,
                                rules_source: str = "coarse") -> List[Tuple[str, float, str, str]]:
     """
     Enhanced recommend_fabrics with localization support
-    增强的面料推荐函数，支持本地化
-    
+    澧炲己鐨勯潰鏂欐帹鑽愬嚱鏁帮紝鏀寔鏈湴鍖?
     Args:
-        attrs: Extracted attributes / 提取的属性
-        lang: Language code for localization / 本地化语言代码
-        top_k: Number of top results / 返回结果数量
-        weights_override: Custom weights / 自定义权重
-        rules_source: "coarse" or "fine" / 规则源："coarse" 或 "fine"
-    
+        attrs: Extracted attributes / 鎻愬彇鐨勫睘鎬?        lang: Language code for localization / 鏈湴鍖栬瑷€浠ｇ爜
+        top_k: Number of top results / 杩斿洖缁撴灉鏁伴噺
+        weights_override: Custom weights / 鑷畾涔夋潈閲?        rules_source: "coarse" or "fine" / 瑙勫垯婧愶細"coarse" 鎴?"fine"
+
     Returns:
-        List of (fabric_name, score, display_name, notes) tuples / 返回（面料名称，得分，显示名称，说明）元组列表
-    """
+        List of (fabric_name, score, display_name, notes) tuples / 杩斿洖锛堥潰鏂欏悕绉帮紝寰楀垎锛屾樉绀哄悕绉帮紝璇存槑锛夊厓缁勫垪琛?    """
     # Get original recommendations
     original_results = recommend_fabrics(attrs, top_k, weights_override, rules_source)
-    
+
     localized_results = []
     for item in original_results:
         if len(item) == 3:
@@ -536,7 +527,7 @@ def recommend_fabrics_localized(attrs: Dict, lang: str = "en", top_k: int = 5,
             name, score = item
             display_name, localized_notes = localize_fabric(name, lang)
             localized_results.append((name, score, display_name, localized_notes))
-    
+
     return localized_results
 
 

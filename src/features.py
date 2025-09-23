@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 from typing import Dict, Any, Iterable, Optional, Tuple
@@ -170,8 +171,8 @@ def extract_features(
     feature_list: Optional[Iterable[str]] = None,
 ) -> Dict[str, Any]:
     """
-    feature_list=None → 计算默认全量；传列表 → 只算需要的（用于局部细化）。
-    返回 dict 的 key 固定：
+    feature_list=None 鈫?璁＄畻榛樿鍏ㄩ噺锛涗紶鍒楄〃 鈫?鍙畻闇€瑕佺殑锛堢敤浜庡眬閮ㄧ粏鍖栵級銆?
+    杩斿洖 dict 鐨?key 鍥哄畾锛?
     ["color_hue","spec_ratio","hl_blob_area","lap_var","lbp_dist",
      "gabor_aniso","fft_dir_deg","fft_peak","transparency","edge_sharp"]
     """

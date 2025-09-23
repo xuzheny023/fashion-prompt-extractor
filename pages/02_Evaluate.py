@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 import json
@@ -17,12 +18,12 @@ except Exception:
         return lambda _feat: {}
 
 
-st.set_page_config(page_title="Evaluate Labeled Patches", layout="centered")
-st.title("📊 Evaluate Labeled Patches")
+st.set_page_config(page_title="Evaluate Labeled Patches", layout="wide")
+st.title("棣冩惓 Evaluate Labeled Patches")
 
 # Sidebar controls
 use_logreg = st.sidebar.checkbox("Use logreg fusion", value=True)
-alpha = st.sidebar.slider("Rule weight α", 0.0, 1.0, 0.6, 0.05)
+alpha = st.sidebar.slider("Rule weight 浼?, 0.0, 1.0, 0.6, 0.05)
 
 
 @st.cache_data(show_spinner=False)

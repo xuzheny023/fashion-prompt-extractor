@@ -1,5 +1,8 @@
+# -*- coding: utf-8 -*-
 # app.py
 import streamlit as st
+# Ensure page layout is set before any other Streamlit calls
+st.set_page_config(page_title="AI Fashion Fabric Analyst", layout="wide")
 import json
 from PIL import Image
 import numpy as np
@@ -10,7 +13,7 @@ from src.attr_extract import extract_attributes, localize_attrs
 from src.fabric_ranker import recommend_fabrics, save_rules_weights, recommend_fabrics_localized
 from src.utils import validate_fabric_rules
 from src.structure_detect import detect_structures, to_bool_set
-from src.i18n import t
+from ui.i18n import t
 from pathlib import Path
 import os
 import shutil
@@ -59,7 +62,7 @@ def _cache_mask_png(png_bytes: bytes):
 @st.cache_data(show_spinner=False)
 def _cache_regions(img_np_small, mask_small, slic_params: dict):
     out = None
-    with swallow("SLIC 分区失败，已回退网格"):
+    with swallow(t("ui.error_slic_fallback")):
         out = build_regions(
             img_np_small,
             method="slic",
@@ -119,21 +122,21 @@ try:
 except Exception:
     from src.utils.errors import swallow  # type: ignore
 
-# =============== 面板显隐开关（调试用） ===============
-SHOW_ATTRS = False  # 默认隐藏“检测到的属性”面板；调试时可改为 True
+# =============== 闂傚倸鐗勯崹鍝勵熆濮椻偓瀵増銈ｉ崘鈺婂悈閻庢鍠掗崑鎾绘煕韫囨洦鍔滅紒杈ㄧ懅閹奉偊宕橀鐘承﹂梺姹囧焺閻撳妲?===============
+# =============== 闂傚牄鍨哄姗€寮版ィ鍐╊吅鐎殿喒鍋撻柛蹇曨劜缁辨瑧鎷崘顓犳Ц闁汇埄鐓夌槐?===============
+SHOW_ATTRS = False  # 濮掓稒顭堥濠氭⒕閹邦垱顥戦柍銉︾矋椤ュ懎霉鐎ｎ亜鐓傞柣銊ュ閻﹢骞€瑜夐埀顒佺箞濞间即寮堕崠锛勫耿閻犲鍟抽惁顖炲籍鐠哄搫璁查柡鈧柅娑滅 True
 
 # =============== Image loading helper ===============
 def load_uploaded_image(uploaded_file, max_side: int = DEFAULT_MAX_SIDE):
-    """
-    读取并转 RGB；过大自动等比缩小；读取失败给出 UI 提示并停止执行�?    """
+    # Read image, convert to RGB; downscale if too large; show UI error and stop on failure
     try:
-        from PIL import Image  # 确保作用域内可用
+        from PIL import Image  # ensure available in local scope
         img = Image.open(uploaded_file).convert("RGB")
     except Exception as e:
-        st.error(f"图片读取失败：{e}")
+        st.error(f"{t('ui.error_image_failed')}: {e}")
         st.stop()
 
-    # 等比缩小到最长边 max_side（避免大图拖慢）
+    # Downscale to max_side on the longest edge to avoid heavy processing
     if max(img.size) > max_side:
         ratio = max_side / max(img.size)
         new_w = int(img.width * ratio)
@@ -143,45 +146,63 @@ def load_uploaded_image(uploaded_file, max_side: int = DEFAULT_MAX_SIDE):
 
     return img
 
-# ================= 页面配置 =================
-st.set_page_config(page_title="AI Fashion Fabric Analyst", layout="centered")
+# ================= 濡炪倗鏁诲浼存煀瀹ュ洨鏋?=================
+# moved to top with layout="wide"
 
-# ================= 国际化配�?=================
+# =============== Inject UI CSS ===============
+def _inject_css():
+    try:
+        css_path = Path(__file__).resolve().parents[0] / "ui" / "theme.css"
+        css = css_path.read_text(encoding="utf-8")
+        st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
+    except Exception:
+        pass
+
+_inject_css()
+
+# ================= 闂佹悶鍎扮划娆忣瀶椤栫偛绀岄柡宥庡幖鐢娊鏌?=================
 # Initialize language in session state with default zh
 if "lang" not in st.session_state:
     st.session_state["lang"] = "zh"
 
-# Language selector - update session state when changed
-lang_options = ("en", "zh")
+# Language selector - label via i18n; display names mapped to stable values
 current_lang = st.session_state["lang"]
-selected_index = 0 if current_lang == "en" else 1
-
-new_lang = st.sidebar.selectbox(
-    t("sidebar.language", current_lang), 
-    lang_options, 
-    index=selected_index
+lang_display = [
+    ("简体中文", "zh"),
+    ("English", "en"),
+]
+display_names = [name for (name, _v) in lang_display]
+value_map = {name: v for (name, v) in lang_display}
+selected_display = st.sidebar.selectbox(
+    t("sidebar.language", current_lang),
+    display_names,
+    index=(0 if current_lang == "zh" else 1),
 )
-
-# Update session state if language changed
+new_lang = value_map.get(selected_display, current_lang)
 if new_lang != current_lang:
     st.session_state["lang"] = new_lang
 
 # Get current language from session state for global use
-lang = st.session_state["lang"]
-
-
 def get_current_lang() -> str:
-    """Get current language from session state / 从会话状态获取当前语言"""
+    """Return current language code from Streamlit session state."""
     return st.session_state["lang"]
 
 
-# ================= 结构检测占位状�?=================
+# ================= 缂傚倷鐒﹂幐濠氭倵椤栨娑㈠焵椤掆偓闇夐悗锝庝簻缁愭霉閿濆懐肖濠殿喗鎮傞弫?=================
 if "struct_conf" not in st.session_state:
     st.session_state["struct_conf"] = {}
 if "struct_set" not in st.session_state:
     st.session_state["struct_set"] = set()
 if "struct_thr" not in st.session_state:
     st.session_state["struct_thr"] = 0.55
+if "click_history" not in st.session_state:
+    st.session_state["click_history"] = []
+if "region_index" not in st.session_state:
+    st.session_state["region_index"] = {}
+if "region_viz" not in st.session_state:
+    st.session_state["region_viz"] = {}
+if "_last_click_ms" not in st.session_state:
+    st.session_state["_last_click_ms"] = 0
 
 # ================= Hybrid (region + local) preset =================
 if "hybrid" not in st.session_state:
@@ -189,14 +210,14 @@ if "hybrid" not in st.session_state:
 
 
 def _get_localized_display_name(fabric_item: dict, lang: str) -> str:
-    """Get localized display name for fabric item / 获取面料项目的本地化显示名称"""
+    """Get localized display name for fabric item (fallbacks to alias/name)."""
     # Try display_name field first
     display_name_data = fabric_item.get("display_name", {})
     if isinstance(display_name_data, dict):
         localized_name = display_name_data.get(lang, "")
         if localized_name:
             return localized_name
-    
+
     # Fallback to alias matching
     aliases = fabric_item.get("alias", [])
     if aliases:
@@ -210,13 +231,13 @@ def _get_localized_display_name(fabric_item: dict, lang: str) -> str:
             for alias in aliases:
                 if not any('\u4e00' <= char <= '\u9fff' for char in alias):
                     return alias
-    
+
     # Final fallback: use name
     return fabric_item.get("name", "Unknown")
 
 
 def _get_localized_notes(fabric_item: dict, lang: str) -> str:
-    """Get localized notes for fabric item / 获取面料项目的本地化说明"""
+    """Get localized notes for fabric item (fallbacks to string/empty)."""
     # Try notes field first
     notes_data = fabric_item.get("notes", {})
     if isinstance(notes_data, dict):
@@ -226,7 +247,7 @@ def _get_localized_notes(fabric_item: dict, lang: str) -> str:
     elif isinstance(notes_data, str):
         # Fallback to string notes for backward compatibility
         return notes_data
-    
+
     return ""
 
 # Validate fine fabric rules at startup
@@ -234,11 +255,11 @@ ok, errs = validate_fabric_rules(str(Path(__file__).resolve().parents[0] / "data
 if not ok:
     st.error(t("msg.validation_failed", get_current_lang()))
 
-st.title("👗 " + t("app.title", get_current_lang()))
+st.title("棣冩啿 " + t("app.title", get_current_lang()))
 st.caption(t("app.subtitle", get_current_lang()))
 
-# ================= 侧边栏：权重调节 =================
-st.sidebar.header("⚙️ " + t("sidebar.weight_header", get_current_lang()))
+# ================= 娓氀嗙珶閺嶅骏绱伴弶鍐櫢鐠嬪啳濡?=================
+st.sidebar.header("閳挎瑱绗?" + t("sidebar.weight_header", get_current_lang()))
 w_color = st.sidebar.slider(t("sidebar.color_weight", get_current_lang()), 0.0, 1.0, 0.5, 0.01)
 w_sheen = st.sidebar.slider(t("sidebar.sheen_weight", get_current_lang()), 0.0, 1.0, 0.3, 0.01)
 w_texture = st.sidebar.slider(t("sidebar.texture_weight", get_current_lang()), 0.0, 1.0, 0.2, 0.01)
@@ -274,14 +295,14 @@ if USE_PACKS:
         st.sidebar.warning(f"packs disabled: {e}")
 
 # Hybrid (region + local) controls
-st.sidebar.header("🧪 " + t("ui.hybrid.title", get_current_lang()))
+st.sidebar.header("濡絽鍞?" + t("ui.hybrid.title", get_current_lang()))
 hy_enabled = st.sidebar.checkbox(t("ui.hybrid.enabled", get_current_lang()), value=bool(st.session_state.get("hybrid", {}).get("enabled", True)))
 hy_radius = st.sidebar.slider(t("ui.hybrid.radius", get_current_lang()), 9, 49, int(st.session_state.get("hybrid", {}).get("radius", 21)), 2)
 hy_alpha = st.sidebar.slider(t("ui.hybrid.alpha", get_current_lang()), 0.0, 1.0, float(st.session_state.get("hybrid", {}).get("alpha", 0.7)), 0.01)
 st.session_state["hybrid"] = {"enabled": bool(hy_enabled), "radius": int(hy_radius), "alpha": float(hy_alpha)}
 
 # Profiling toggle
-prof_on = st.sidebar.checkbox("性能日志", value=False)
+prof_on = st.sidebar.checkbox(t("ui.performance_log"), value=False)
 
 # Fine-grained fabric library preview
 with st.sidebar.expander(t("sidebar.fabric_preview", get_current_lang())):
@@ -313,7 +334,7 @@ with st.sidebar.expander(t("sidebar.fabric_preview", get_current_lang())):
             # Use localized display name and notes
             display_name = _get_localized_display_name(it, get_current_lang())
             notes = _get_localized_notes(it, get_current_lang())
-            
+
             rows.append({
                 col_name: display_name,
                 col_alias: ", ".join(it.get("alias", [])),
@@ -337,9 +358,9 @@ with st.sidebar.expander("Patch Annotation"):
         top1 = lp.get("top1") or ""
         top2 = lp.get("top2") or ""
         st.caption(f"Last patch: {Path(lp.get('png','')).name}")
-        choice = st.radio("标注为 / Label as", options=[f"Top1: {top1}", f"Top2: {top2}", "Other…"], index=0)
+        choice = st.radio(t("ui.label_as"), options=[f"Top1: {top1}", f"Top2: {top2}", "Other…"], index=0)
         other_key = st.text_input("Fabric key (for Other)", value="" if choice != "Other…" else (lp.get("top1") or ""))
-        if st.button("提交标注 / Submit"):
+        if st.button(t("ui.submit_label")):
             try:
                 png_src = Path(lp.get("png"))
                 json_src = Path(lp.get("json"))
@@ -374,9 +395,9 @@ with st.sidebar.expander("Patch Annotation"):
                 print(f"[patch] moved to {dst_dir}")
                 st.session_state["last_patch"] = None
             except Exception as e:
-                st.error(f"标注保存失败: {e}")
+                st.error(f"{t('ui.error_save_failed')}: {e}")
 
-# ================= 主功能区 =================
+# ================= 婵炴垶鎹侀褎鎱ㄥ☉銏″殑闁芥ê顦梾?=================
 uploaded_file = st.file_uploader(t("main.uploader", get_current_lang()), type=["jpg", "jpeg", "png"], accept_multiple_files=False)
 if uploaded_file is not None and getattr(uploaded_file, 'size', None) is not None:
     if uploaded_file.size > 20 * 1024 * 1024:
@@ -386,189 +407,147 @@ if uploaded_file is not None and getattr(uploaded_file, 'size', None) is not Non
 if uploaded_file is None:
     st.stop()
 else:
-    # 原图展示（并生成固定宽度的预览图，便于简化坐标映射）
-    image = load_uploaded_image(uploaded_file, max_side=DEFAULT_MAX_SIDE)
+    # 閸樼喎娴樻稉搴暕鐟欏牞绱欓崶鍝勭暰鐎硅棄瀹抽敍澶涚礉閻劋绨悙鐟板毊閺勭姴鐨?    image = load_uploaded_image(uploaded_file, max_side=DEFAULT_MAX_SIDE)
     preview_pil, orig_w, orig_h = make_preview(image, PREVIEW_WIDTH)
     disp_w, disp_h = preview_pil.width, preview_pil.height
-    st.image(preview_pil, caption=t("main.uploader", get_current_lang()), use_container_width=False)
 
-    # 状态进度显示
-    with st.status(t("ui.status.loading", get_current_lang()), expanded=False) as _status:
-        p = st.progress(0, text="载入图片")
+    # 娑撱倕鍨敮鍐ㄧ湰閿涘牏瀹?37% / 63%閿?    col_left, col_right = st.columns([3, 5], gap="small")
 
-        # 生成 mask（内部使用，不展示）
-        p.progress(10, text="生成服装掩膜")
-        try:
-            mask, _ = get_foreground_mask(image)
-        except Exception as e:
-            st.error(t("msg.mask_generation_failed", get_current_lang()))
-            st.stop()
+    # 涓ゅ垪甯冨眬锛?0 / 50锛夛紝鍥哄畾闂磋窛
+    col_left, col_right = st.columns([1, 1], gap="medium")
 
-        # 属性提取
-        try:
-            attrs = extract_attributes(image, mask)
-            if SHOW_ATTRS:
-                st.markdown("### 🔍 " + t("main.attributes_title", get_current_lang()))
-                # 显示本地化的属性（仅在调试开关开启时显示）
-                localized_attrs = localize_attrs(attrs, get_current_lang())
-                st.json(localized_attrs)
-            else:
-                pass
-        except Exception as e:
-            st.error(t("msg.attribute_extraction_failed", get_current_lang()))
-            st.stop()
+    # 鍒濆鍖栧苟鏋勫缓绱㈠紩锛堟棤杩涘害鏉℃樉绀猴級
+    try:
+        mask, _ = get_foreground_mask(image)
+    except Exception:
+        st.error(t("msg.mask_generation_failed", get_current_lang()))
+        st.stop()
 
-        # ---------------- 区域索引：构建分区 + 区域特征 + 区域推荐 ----------------
-        p.progress(35, text="区域划分")
-        try:
-            # Resize for performance (longest side <= DEFAULT_MAX_SIDE)
-            img_np = np.array(image.convert("RGB"))[:, :, ::-1]
-            H, W = img_np.shape[:2]
-            scale = 1.0
-            max_side = max(H, W)
-            if max_side > DEFAULT_MAX_SIDE:
-                scale = float(DEFAULT_MAX_SIDE) / float(max_side)
-                img_np_small = cv2.resize(img_np, (int(W * scale), int(H * scale)), interpolation=cv2.INTER_AREA)
-                mask_small = cv2.resize(mask, (int(W * scale), int(H * scale)), interpolation=cv2.INTER_NEAREST)
-            else:
-                img_np_small = img_np
-                mask_small = mask
+    try:
+        attrs = extract_attributes(image, mask)
+        if SHOW_ATTRS:
+            st.markdown("### " + t("main.attributes_title", get_current_lang()))
+            localized_attrs = localize_attrs(attrs, get_current_lang())
+            st.json(localized_attrs)
+    except Exception:
+        st.error(t("msg.attribute_extraction_failed", get_current_lang()))
+        st.stop()
 
-            # Cached regionization
-            regions_out = _cache_regions(img_np_small, mask_small, DEFAULT_SLIC)
-            labels = regions_out.get("labels")
-            regions = regions_out.get("regions", {})
+    try:
+        # Resize for performance (longest side <= DEFAULT_MAX_SIDE)
+        img_np = np.array(image.convert("RGB"))[:, :, ::-1]
+        H, W = img_np.shape[:2]
+        scale = 1.0
+        max_side = max(H, W)
+        if max_side > DEFAULT_MAX_SIDE:
+            scale = float(DEFAULT_MAX_SIDE) / float(max_side)
+            img_np_small = cv2.resize(img_np, (int(W * scale), int(H * scale)), interpolation=cv2.INTER_AREA)
+            mask_small = cv2.resize(mask, (int(W * scale), int(H * scale)), interpolation=cv2.INTER_NEAREST)
+        else:
+            img_np_small = img_np
+            mask_small = mask
 
-            # Cached features
-            p.progress(60, text="计算区域特征")
-            feats = _cache_region_features(img_np_small, regions) if not prof_on else compute_region_features(img_np_small, regions)
+        # Cached regionization
+        regions_out = _cache_regions(img_np_small, mask_small, DEFAULT_SLIC)
+        labels = regions_out.get("labels")
+        regions = regions_out.get("regions", {})
 
-            # Cached region Top-K (weights affect ordering but we return fresh list per weights)
-            p.progress(85, text="生成推荐索引")
-            region_topk, topk_scores = _cache_region_topk(feats, weights)
+        # Cached features
+        feats = _cache_region_features(img_np_small, regions) if not prof_on else compute_region_features(img_np_small, regions)
 
-            # Save to session for fast lookup
-            st.session_state["region_index"] = {
-                "labels": labels,
-                "regions": regions,
-                "features": feats,
-                "topk": region_topk,
-                "topk_scores": topk_scores,
-                "meta": regions_out.get("meta", {}),
-                "method": regions_out.get("method", "grid"),
-                "scale": scale,
-                "image": img_np_small,
-                "fg_mask": mask_small,
-            }
+        # Cached region Top-K (weights affect ordering but we return fresh list per weights)
+        region_topk, topk_scores = _cache_region_topk(feats, weights)
 
-            # Cached visualization assets
-            st.session_state["region_viz"] = _cache_region_viz(labels, region_topk)
+        # Save to session for fast lookup
+        st.session_state["region_index"] = {
+            "labels": labels,
+            "regions": regions,
+            "features": feats,
+            "topk": region_topk,
+            "topk_scores": topk_scores,
+            "meta": regions_out.get("meta", {}),
+            "method": regions_out.get("method", "grid"),
+            "scale": scale,
+            "image": img_np_small,
+            "fg_mask": mask_small,
+        }
 
-            p.progress(100, text="完成")
-            _status.update(label=t("ui.status.ready", get_current_lang()), state="complete")
-        except Exception:
-            # Non-blocking if region pipeline fails
+        # Cached visualization assets
+        st.session_state["region_viz"] = _cache_region_viz(labels, region_topk)
+
+    except Exception:
+        # Non-blocking if region pipeline fails; preserve previous session data
+        if "region_index" not in st.session_state:
             st.session_state["region_index"] = {}
 
-    # ---------------- 点击查询区域 Top-K ----------------
-    try:
-        st.markdown("### 🧭 " + t("region.section_title", get_current_lang()))
+    # ---------------- 闁汇埄鍨伴崯顐︽儑椤掆偓閵嗘帡宕ｆ径灞藉脯 ----------------
+    with col_left:
+        # Left: single clickable image
+        if not HAS_IC:
+            st.error(t("ui.click.fallback", get_current_lang()))
+            st.stop()
+        st.caption(t("layout.click_hint", get_current_lang()))
+        click_x = click_y = None
+        # 闂勬劕鍩楁稉璇叉禈鐎圭懓娅掓妯哄閿涘矁绉撮崙鐑樼泊閸旑煉绱欐禒鍛箯閸掓鍞撮柈銊︾泊閸旑煉绱?        st.markdown('<div class="left-pane"><div class="left-scroll">', unsafe_allow_html=True)
+        with swallow(t("ui.error_click_capture")):
+            res = ic.streamlit_image_coordinates(preview_pil, key="imgcoords")
+            if res is not None and "x" in res and "y" in res:
+                # simple debounce: ignore clicks within 120ms
+                now_ms = int(datetime.now().timestamp() * 1000)
+                last_ms = int(st.session_state.get("_last_click_ms", 0))
+                if now_ms - last_ms >= 120:
+                    click_x = int(res["x"])
+                    click_y = int(res["y"])
+                    st.session_state["_last_click_ms"] = now_ms
+        st.markdown('</div></div>', unsafe_allow_html=True)
+
+    with col_right:
+        st.markdown('<div class="right-pane">', unsafe_allow_html=True)
         reg_index = st.session_state.get("region_index", {})
         labels = reg_index.get("labels")
         img_small = reg_index.get("image")
-        if labels is None or img_small is None:
-            st.info(t("region.unavailable", get_current_lang()))
+
+        # Map from preview to original coordinates; save to session
+        if click_x is not None and click_y is not None:
+            x0, y0 = map_simple_scale(int(click_x), int(click_y), disp_w, disp_h, int(orig_w), int(orig_h))
+            st.session_state["click_xy"] = (int(x0), int(y0))
+            # Maintain click history (last 5)
+            hist = st.session_state.get("click_history", [])
+            ts = datetime.now().strftime("%H:%M:%S")
+            hist.append({"x": int(x0), "y": int(y0), "t": ts})
+            st.session_state["click_history"] = hist[-5:]
+
+        # Card 1: coordinates & time
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        st.markdown("### " + t("panel.right_title", get_current_lang()))
+        cx, cy = st.session_state.get("click_xy", (None, None))
+        if cx is not None and cy is not None:
+            st.caption(t("region.coords_label", get_current_lang()).format(x=int(cx), y=int(cy)))
+            if st.session_state.get("click_history"):
+                st.caption(st.session_state.get("click_history")[-1].get("t", ""))
         else:
-            # Visualization toggles
-            show_heat = st.toggle(t("region.heatmap_toggle", get_current_lang()), value=False)
-            alpha = st.slider(t("region.alpha_label", get_current_lang()), 0.0, 1.0, 0.35, 0.01)
-            show_boundary = st.toggle(t("region.boundary_toggle", get_current_lang()), value=False)
+            st.caption(t("region.unavailable", get_current_lang()))
+        st.markdown('</div>', unsafe_allow_html=True)
 
-            # Compose overlay once per render from cached assets on preview
-            base = np.array(preview_pil)[:, :, ::-1].copy()
-            viz = st.session_state.get("region_viz", {})
-            heat = viz.get("heat")
-            boundary = viz.get("boundary")
-            blended = base
-            if show_heat and heat is not None:
-                blended = cv2.addWeighted(base, 1.0 - alpha, heat, alpha, 0)
-            if show_boundary and boundary is not None:
-                # draw thin yellow boundary
-                yy, xx = np.where(boundary > 0)
-                blended[yy, xx] = (0, 255, 255)
+        if click_x is not None and click_y is not None and labels is not None:
+            # Convert original-space coordinates to labels-space via stored scale
+            scale_val = float(st.session_state.get("region_index", {}).get("scale", 1.0))
+            xl = int(round(st.session_state["click_xy"][0] * scale_val))
+            yl = int(round(st.session_state["click_xy"][1] * scale_val))
+            rid = locate_region(labels, xl, yl)
+            if rid is None:
+                st.caption(t("ui.click.not_in_region", get_current_lang()))
+                st.session_state["last_region_id"] = None
+            else:
+                st.session_state["last_region_id"] = int(rid)
 
-            click_x = click_y = None
-            # Try interactive coordinate picker(s), with graceful fallback
-            disp_h, disp_w = blended.shape[0], blended.shape[1]
-            if not HAS_IC and HAS_CANVAS and not st.session_state.get("_use_canvas_warned", False):
-                st.session_state["_use_canvas_warned"] = True
-                st.warning(t("ui.click.use_canvas", get_current_lang()))
-            if not HAS_CANVAS and not HAS_IC and not st.session_state.get("_canvas_warned", False):
-                st.session_state["_canvas_warned"] = True
-                st.warning(t("ui.click.fallback", get_current_lang()))
-
-            got_disp_coords = False
-            # Strict click-only: prefer ic, else canvas, else error
-            if HAS_IC:
-                with swallow("点击坐标捕获失败"):
-                    st.caption(t("ui.click.hint", get_current_lang()))
-                    res = ic.streamlit_image_coordinates(preview_pil, key="imgcoords")
-                    if res is not None and "x" in res and "y" in res:
-                        x_disp = int(res["x"])
-                        y_disp = int(res["y"])
-                        click_x, click_y = x_disp, y_disp
-                        got_disp_coords = True
-
-            if not got_disp_coords and HAS_CANVAS:
-                with swallow("画布点击失败"):
-                    st.caption(t("ui.click.hint", get_current_lang()))
-                    canvas = st_canvas(width=disp_w, height=disp_h, drawing_mode="point", background_image=preview_pil, key="clickcv")
-                    if canvas and hasattr(canvas, "json_data") and canvas.json_data:
-                        objs = canvas.json_data.get("objects") or []
-                        if objs:
-                            last = objs[-1]
-                            x_disp = int(round(float(last.get("left", 0))))
-                            y_disp = int(round(float(last.get("top", 0))))
-                            click_x, click_y = x_disp, y_disp
-                            got_disp_coords = True
-
-            if not got_disp_coords:
-                st.error(t("ui.click.fallback", get_current_lang()))
-                st.stop()
-
-            # Map from preview to original coordinates; save to session
-            if click_x is not None and click_y is not None:
-                x0, y0 = map_simple_scale(int(click_x), int(click_y), disp_w, disp_h, int(orig_w), int(orig_h))
-                st.session_state["click_xy"] = (int(x0), int(y0))
-
-            if click_x is not None and click_y is not None:
-                # Convert original-space coordinates to labels-space via stored scale
-                scale_val = float(st.session_state.get("region_index", {}).get("scale", 1.0))
-                xl = int(round(st.session_state["click_xy"][0] * scale_val))
-                yl = int(round(st.session_state["click_xy"][1] * scale_val))
-                rid = locate_region(labels, xl, yl)
-                st.caption(t("region.coords_label", get_current_lang()).format(x=st.session_state["click_xy"][0], y=st.session_state["click_xy"][1]))
-                if rid is None:
-                    st.info(t("ui.click.not_in_region", get_current_lang()))
-                    st.session_state["last_region_id"] = None
+                # Card 2: Top-K
+                st.markdown('<div class="card">', unsafe_allow_html=True)
+                st.markdown("### " + t("panel.topk_title", get_current_lang()))
+                items = reg_index.get("topk", {}).get(int(rid), [])
+                if not items:
+                    st.caption(t("sidebar.no_entries", get_current_lang()))
                 else:
-                    st.session_state["last_region_id"] = int(rid)
-                    # Highlight selected region
-                    try:
-                        sel_mask = (labels == int(rid)).astype(np.uint8) * 255
-                        sel_mask3 = cv2.merge([sel_mask, sel_mask, sel_mask])
-                        color = np.zeros_like(blended)
-                        color[:, :] = (0, 200, 50)
-                        blended2 = np.where(sel_mask3 > 0, (0.7 * blended + 0.3 * color).astype(np.uint8), blended)
-                        st.image(blended2[:, :, ::-1], use_container_width=True)
-                    except Exception:
-                        st.image(blended[:, :, ::-1], use_container_width=True)
-
-                    st.markdown("#### 🧵 " + t("region.topk_title", get_current_lang()).format(rid=rid))
-                    items = reg_index.get("topk", {}).get(int(rid), [])
-                    if not items:
-                        st.caption(t("sidebar.no_entries", get_current_lang()))
-                    else:
                         # Compute confidence metrics based on fused/region scores
                         # Build score dict for Top-K list
                         scores_dict = {str(n): float(s) for (n, s, *_e) in items}
@@ -597,55 +576,47 @@ else:
                         except Exception:
                             conf_logreg = 0.0
                         conf_total = float(0.6 * conf_rule_total + 0.4 * conf_logreg) if conf_logreg > 0.0 else float(conf_rule_total)
+                        # Prepare light tips for Card 3
+                        conf_tip_text = t("panel.low_confidence_tip", get_current_lang()) if conf_total < 0.35 else ""
+                        fam = ""
+                        if conf_total < 0.2:
+                            if top1_name:
+                                key = top1_name.lower()
+                                if any(k in key for k in ["satin","taffeta","charmeuse"]):
+                                    fam = t("family.sheen", get_current_lang())
+                                elif any(k in key for k in ["tweed","herringbone","denim","twill"]):
+                                    fam = t("family.twill", get_current_lang())
+                                elif any(k in key for k in ["organza","chiffon","georgette","tulle","lace"]):
+                                    fam = t("family.sheer", get_current_lang())
+                                elif any(k in key for k in ["velvet","corduroy","suede","fleece"]):
+                                    fam = t("family.pile", get_current_lang())
+                                elif any(k in key for k in ["jersey","rib","interlock","ponte"]):
+                                    fam = t("family.knit", get_current_lang())
+                        coarse_text = f"{t('panel.coarse_suggestion_label', get_current_lang())}: {fam or '-'}" if fam else ""
 
                         for i, (name, score, explain) in enumerate(items, 1):
                             disp, notes = localize_fabric(name, get_current_lang())
                             score_label = t("candidates.score", get_current_lang())
-                            st.write(f"{i}. **{disp}** — {score_label}: **{score:.2f}**")
-                            # Explain summary
+                            # Unified single-row: idx. name 閳ユ柡鈧?鐠囧嫬鍨?1.00 (score weak-emphasis via CSS)
+                            st.markdown(
+                                f"<div class='row'><span class='idx'>{i}.</span><span class='name'>{disp} 閳ユ柡鈧?/span><span class='score'>{score_label} {score:.2f}</span></div>",
+                                unsafe_allow_html=True,
+                            )
+                            # Optional short explain summary
                             if isinstance(explain, dict):
                                 comps = explain.get("components", {})
                                 if comps:
-                                    st.caption(
-                                        t("region.explain", get_current_lang()).format(
-                                            color=str(comps.get("color", "-")),
-                                            coverage=str(comps.get("coverage", "-"))
-                                        )
+                                    st.markdown(
+                                        f"<div class='desc'>{t('region.explain', get_current_lang()).format(color=str(comps.get('color','-')), coverage=str(comps.get('coverage','-')))}</div>",
+                                        unsafe_allow_html=True,
                                     )
+                            # Optional notes, truncated and indented
                             if notes:
                                 max_len = 30
-                                st.caption(notes if len(notes) <= max_len else notes[:max_len] + "…")
+                                note_snip = notes if len(notes) <= max_len else notes[:max_len] + "…"
+                                st.markdown(f"<div class='desc'>{note_snip}</div>", unsafe_allow_html=True)
 
-                        # Low-confidence hints
-                        if conf_total < 0.35:
-                            st.warning("置信度低，建议采样并标注提升")
-                        if conf_total < 0.2:
-                            # simple coarse family fallback hint based on top1_score proxy
-                            fam = ""
-                            if top1_name:
-                                key = top1_name.lower()
-                                if any(k in key for k in ["satin","taffeta","charmeuse"]):
-                                    fam = "高光平滑类"
-                                elif any(k in key for k in ["tweed","herringbone","denim","twill"]):
-                                    fam = "斜纹/粗呢类"
-                                elif any(k in key for k in ["organza","chiffon","georgette","tulle","lace"]):
-                                    fam = "透纱类"
-                                elif any(k in key for k in ["velvet","corduroy","suede","fleece"]):
-                                    fam = "绒类"
-                                elif any(k in key for k in ["jersey","rib","interlock","ponte"]):
-                                    fam = "针织类"
-                            st.info(f"建议粗粒度：{fam or '待定'}")
-
-                        # Save-as-training button (reuse Y2 saving; we already saved on click)
-                        if st.button("保存为训练样本", key=f"save_train_{rid}"):
-                            # Reuse the Y2 save path; if not present, try saving again quickly
-                            if not st.session_state.get("last_patch"):
-                                try:
-                                    # Trigger a quick save using existing cropped region if available
-                                    pass
-                                except Exception:
-                                    pass
-                            st.success("已保存（或已存在）")
+                        # (Card 3 and Card 4 will render after closing this Top-K card)
 
                         # ---- Y2: Save unlabeled region patch + sidecar JSON ----
                         try:
@@ -708,74 +679,108 @@ else:
                         except Exception as _e:
                             print(f"[patch] save failed: {_e}")
 
-                    # Local refinement features + fused recommendation
-                    try:
-                        hcfg = st.session_state.get("hybrid", {"enabled": True, "radius": 21, "alpha": 0.7})
-                        if not hcfg.get("enabled", True):
-                            st.caption(t("ui.hybrid.tip_cached", get_current_lang()))
-                        else:
-                            # Local LRU cache to avoid recomputation for repeated clicks nearby
-                            # Key uses coarse coordinate buckets and weights
+                st.markdown('</div>', unsafe_allow_html=True)
+
+                # Card 3: 置信度与建议
+                if (locals().get('conf_tip_text') or locals().get('coarse_text')):
+                    st.markdown('<div class="card">', unsafe_allow_html=True)
+                    st.markdown("### " + t("panel.confidence_title", get_current_lang()))
+                    if locals().get('conf_tip_text'):
+                        st.markdown(f"<div class='caption'>{conf_tip_text}</div>", unsafe_allow_html=True)
+                    if locals().get('coarse_text'):
+                        st.markdown(f"<div class='caption'>{coarse_text}</div>", unsafe_allow_html=True)
+                    st.markdown('</div>', unsafe_allow_html=True)
+
+                # Card 4: 操作
+                st.markdown('<div class="card">', unsafe_allow_html=True)
+                st.markdown("### " + t("panel.actions_title", get_current_lang()))
+                st.markdown('<div class="btn-row">', unsafe_allow_html=True)
+                col_a, col_b = st.columns(2, gap="small")
+                with col_a:
+                    if st.button(t("panel.btn_save_training", get_current_lang()), key=f"save_train_{rid}"):
+                        if not st.session_state.get("last_patch"):
                             try:
-                                import hashlib as _hashlib
-                                img_key = _hashlib.md5(reg_index.get("image", np.zeros((1,1,3),dtype=np.uint8)).tobytes()).hexdigest()[:10]
-                            except Exception:
-                                img_key = "img"
-                            weights_key = f"{weights.get('color',0):.3f}-{weights.get('sheen',0):.3f}-{weights.get('texture',0):.3f}"
-                            key_tuple = (img_key, int(click_x)//4, int(click_y)//4, int(hcfg.get("radius",21)), weights_key)
-
-                            @st.cache_data(show_spinner=False)
-                            def _cache_local_feats(_key, im, cx, cy, rr, fg):
-                                win_bgr, win_mask, bbox = get_local_window(im, cx, cy, rr, cloth_mask=fg)
-                                feat_list = choose_features_for_local()
-                                if prof_on:
-                                    from src.utils.timing import timeit
-                                    _ext = timeit("local_extract_features")(extract_features)
-                                    feats = _ext(win_bgr, win_mask, feature_list=feat_list)
-                                else:
-                                    feats = extract_features(win_bgr, win_mask, feature_list=feat_list)
-                                return {"bbox": bbox, "features": feats}
-
-                            local_pack = _cache_local_feats(key_tuple, img_small, int(click_x), int(click_y), int(hcfg.get("radius", 21)), reg_index.get("fg_mask"))
-                            st.session_state["local_feats"] = local_pack
-
-                            # Scoring fusion
-                            rid_attrs = reg_index.get("features", {}).get(int(rid), {}).get("attrs", {})
-                            feat_dict_for_score = {"attrs": rid_attrs}
-                            if prof_on:
-                                from src.utils.timing import timeit
-                                _rff = timeit("recommend_from_features")(recommend_from_features)
-                                local_scores = _rff(feat_dict_for_score, rules=None, weights=weights, topk=10)
-                            else:
-                                local_scores = recommend_from_features(feat_dict_for_score, rules=None, weights=weights, topk=10)
-                            region_scores = reg_index.get("topk_scores", {}).get(int(rid), {})
-                            if prof_on:
-                                from src.utils.timing import timeit
-                                _fz = timeit("fuse_region_local")(fuse_region_and_local_scores)
-                                fused = _fz(region_scores, local_scores, float(hcfg.get("alpha", 0.7)))
-                            else:
-                                fused = fuse_region_and_local_scores(region_scores, local_scores, float(hcfg.get("alpha", 0.7)))
-                            fused_sorted = sorted(fused.items(), key=lambda kv: kv[1].get("total", 0.0), reverse=True)[:5]
-                            st.markdown("#### ✨ " + t("ui.hybrid.title", get_current_lang()))
-                            st.caption(t("ui.hybrid.tip_refined", get_current_lang()))
-                            for i, (fname, finfo) in enumerate(fused_sorted, 1):
-                                disp, notes = localize_fabric(fname, get_current_lang())
-                                score_label = t("candidates.score", get_current_lang())
-                                st.write(f"{i}. **{disp}** — {score_label}: **{finfo.get('total', 0.0):.2f}**")
-                            try:
-                                reg_top3 = sorted([(k, v.get('total', 0.0)) for k, v in region_scores.items()], key=lambda x: x[1], reverse=True)[:3]
-                                loc_top3 = sorted([(n, s) for (n, s, *_e) in local_scores], key=lambda x: x[1], reverse=True)[:3]
-                                print("[fusion] region top3:", reg_top3)
-                                print("[fusion] local  top3:", loc_top3)
+                                pass
                             except Exception:
                                 pass
-                    except Exception:
-                        pass
-    except Exception:
-        pass
+                        st.success(t("ui.save_success"))
+                with col_b:
+                    st.button(t("panel.btn_vote_up", get_current_lang()), key=f"vote_up_{rid}")
+                st.markdown('</div>', unsafe_allow_html=True)
+                st.markdown('</div>', unsafe_allow_html=True)
+                # Local refinement features + fused recommendation
+                try:
+                    hcfg = st.session_state.get("hybrid", {"enabled": True, "radius": 21, "alpha": 0.7})
+                    if not hcfg.get("enabled", True):
+                        st.caption(t("ui.hybrid.tip_cached", get_current_lang()))
+                    else:
+                        # Local LRU cache to avoid recomputation for repeated clicks nearby
+                        # Key uses coarse coordinate buckets and weights
+                        try:
+                            import hashlib as _hashlib
+                            img_key = _hashlib.md5(reg_index.get("image", np.zeros((1,1,3),dtype=np.uint8)).tobytes()).hexdigest()[:10]
+                        except Exception:
+                            img_key = "img"
+                        weights_key = f"{weights.get('color',0):.3f}-{weights.get('sheen',0):.3f}-{weights.get('texture',0):.3f}"
+                        key_tuple = (img_key, int(click_x)//4, int(click_y)//4, int(hcfg.get("radius",21)), weights_key)
 
-    # 面料推荐（支�?coarse/fine 源），fine 异常回退 coarse
-    st.markdown("### 🧵 " + t("main.candidates_title", get_current_lang()))
+                        @st.cache_data(show_spinner=False)
+                        def _cache_local_feats(_key, im, cx, cy, rr, fg):
+                            win_bgr, win_mask, bbox = get_local_window(im, cx, cy, rr, cloth_mask=fg)
+                            feat_list = choose_features_for_local()
+                            if prof_on:
+                                from src.utils.timing import timeit
+                                _ext = timeit("local_extract_features")(extract_features)
+                                feats = _ext(win_bgr, win_mask, feature_list=feat_list)
+                            else:
+                                feats = extract_features(win_bgr, win_mask, feature_list=feat_list)
+                            return {"bbox": bbox, "features": feats}
+
+                        local_pack = _cache_local_feats(key_tuple, img_small, int(click_x), int(click_y), int(hcfg.get("radius", 21)), reg_index.get("fg_mask"))
+                        st.session_state["local_feats"] = local_pack
+
+                        # Scoring fusion
+                        rid_attrs = reg_index.get("features", {}).get(int(rid), {}).get("attrs", {})
+                        feat_dict_for_score = {"attrs": rid_attrs}
+                        if prof_on:
+                            from src.utils.timing import timeit
+                            _rff = timeit("recommend_from_features")(recommend_from_features)
+                            local_scores = _rff(feat_dict_for_score, rules=None, weights=weights, topk=10)
+                        else:
+                            local_scores = recommend_from_features(feat_dict_for_score, rules=None, weights=weights, topk=10)
+                        region_scores = reg_index.get("topk_scores", {}).get(int(rid), {})
+                        if prof_on:
+                            from src.utils.timing import timeit
+                            _fz = timeit("fuse_region_local")(fuse_region_and_local_scores)
+                            fused = _fz(region_scores, local_scores, float(hcfg.get("alpha", 0.7)))
+                        else:
+                            fused = fuse_region_and_local_scores(region_scores, local_scores, float(hcfg.get("alpha", 0.7)))
+                        fused_sorted = sorted(fused.items(), key=lambda kv: kv[1].get("total", 0.0), reverse=True)[:5]
+                        st.markdown("#### 闂?" + t("ui.hybrid.title", get_current_lang()))
+                        st.caption(t("ui.hybrid.tip_refined", get_current_lang()))
+                        for i, (fname, finfo) in enumerate(fused_sorted, 1):
+                            disp, notes = localize_fabric(fname, get_current_lang())
+                            score_label = t("candidates.score", get_current_lang())
+                            st.write(f"{i}. **{disp}** 闂?{score_label}: **{finfo.get('total', 0.0):.2f}**")
+                        try:
+                            reg_top3 = sorted([(k, v.get('total', 0.0)) for k, v in region_scores.items()], key=lambda x: x[1], reverse=True)[:3]
+                            loc_top3 = sorted([(n, s) for (n, s, *_e) in local_scores], key=lambda x: x[1], reverse=True)[:3]
+                            print("[fusion] region top3:", reg_top3)
+                            print("[fusion] local  top3:", loc_top3)
+                        except Exception:
+                            pass
+                except Exception:
+                    pass
+        # Recent clicks card
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        st.markdown("#### " + t("panel.recent_clicks_label", get_current_lang()))
+        for item in reversed(st.session_state.get("click_history", [])):
+            st.caption(f"{item.get('t','')}: ({item.get('x','-')}, {item.get('y','-')})")
+        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    # 闂傚倸鐗勯崹娲几閿熺姴绠抽柕濞垮妼缁€鍐煥濞戞澧涢柡渚囧櫍閺?coarse/fine 濠电姍鍕Ё缂佽鲸宀搁弫宥団偓瑙勬綊ne 閻庢鍠栭崐鎼佹偉閸洖鐐婇柣鎰€€閸嬫捇鍩€?coarse
+    st.markdown("### 濡絽鍞?" + t("main.candidates_title", get_current_lang()))
     rules_source = "fine" if use_fine else "coarse"
     try:
         # If using packs, override fine rules via merged list in memory
@@ -811,7 +816,7 @@ else:
     except Exception as e:
         if rules_source == "fine":
             st.sidebar.warning(t("msg.rules_fallback", get_current_lang()))
-            rules_source = "coarse"  # 强制回退
+            rules_source = "coarse"
             candidates = recommend_fabrics_localized(attrs, lang=get_current_lang(), top_k=5, weights_override=weights, rules_source=rules_source)
         else:
             st.error(t("msg.fabric_recommendation_failed", get_current_lang()))
@@ -821,33 +826,23 @@ else:
     for i, item in enumerate(candidates, 1):
         if len(item) == 4:
             name, score, display_name, notes = item
-            
-            # 确保显示名称不为空，如果为空则使用本地化回退
+            # 确保显示名称不为空
             if not display_name:
                 display_name = name
-            
-            # 格式化分数显示
+            # 分数标签
             score_label = t("candidates.score", get_current_lang())
-            
-            # 显示面料名称和分数
+            # 第一行：名称 + 分数
             st.write(f"{i}. **{display_name}** — {score_label}: **{score:.2f}**")
-            
-            # 显示详细说明（截断处理）
+            # 第二行：描述（可选，截断）
             if notes and isinstance(notes, str) and notes.strip():
-                # 截断到30字符左右，保持完整性
                 max_len = 30
-                if len(notes) > max_len:
-                    # 找到最近的句号或逗号作为截断点
-                    truncate_point = max_len
-                    for punct in ['。', '.', '，', ',', '；', ';']:
-                        punct_pos = notes.find(punct, 0, max_len)
-                        if punct_pos > 0:
-                            truncate_point = punct_pos + 1
-                            break
-                    note_snip = notes[:truncate_point] + "…"
-                else:
-                    note_snip = notes
-                
+                truncate_point = max_len
+                for punct in ['。', '.', '，', ',', '；', ';']:
+                    punct_pos = notes.find(punct, 0, max_len)
+                    if punct_pos > 0:
+                        truncate_point = punct_pos + 1
+                        break
+                note_snip = notes if len(notes) <= max_len else notes[:truncate_point] + "…"
                 desc_label = t("candidates.description", get_current_lang())
                 st.caption(f"*{desc_label}: {note_snip}*")
         else:
@@ -856,10 +851,4 @@ else:
             score_label = t("candidates.score", get_current_lang())
             st.write(f"{i}. **{name}** — {score_label}: **{score:.2f}**")
 
-    # 可选：调试开关，叠加 mask 预览
-    if st.toggle(t("main.mask_toggle", get_current_lang())):
-        overlay = np.array(image).copy()
-        over = overlay.copy()
-        over[mask > 0] = (255, 0, 0)  # 红色标记前景
-        preview = cv2.addWeighted(overlay, 0.7, over, 0.3, 0)
-        st.image(preview, caption=t("debug.mask_overlay", get_current_lang()), use_container_width=True)
+    # 旧调试蒙版渲染已禁用，避免重复大图渲染
