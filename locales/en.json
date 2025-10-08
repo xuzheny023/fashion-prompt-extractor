@@ -24,12 +24,12 @@
   },
   "main": {
     "uploader": "Upload a fashion image (JPG, PNG)",
-    "file_size_warning": "閳跨媴绗?File size exceeds 20MB limit. Please upload a smaller image.",
-    "processing": "棣冩敡 Processing image...",
+    "file_size_warning": "File size exceeds 20MB limit. Please upload a smaller image.",
+    "processing": "Processing image...",
     "attributes_title": "Detected Attributes",
     "candidates_title": "Recommended Fabrics",
     "mask_toggle": "Show Mask Overlay (Debug)",
-    "drop_to_start": "棣冩啘 Drop an image here to start analysis"
+    "drop_to_start": "Drop an image here to start analysis"
   },
   "candidates": {
     "score": "Score",
@@ -96,7 +96,7 @@
     },
     "status": {
       "loading": "Processing...",
-      "ready": "閴?Ready"
+      "ready": "Ready"
     }
   },
   "msg": {

@@ -48,7 +48,7 @@
       },
       "notes": {
         "en": "Lightweight, sheer fabric perfect for flowing garments",
-        "zh": "轻薄透明面料，适合流动感服装"
+        "zh": "轻薄透明面料,适合流动感服装"
       },
       "suitable_structures": [
         "sleeve",
@@ -77,7 +77,7 @@
       },
       "notes": {
         "en": "Crisp, sheer fabric ideal for structured designs",
-        "zh": "挺括透明面料，适合结构化设计"
+        "zh": "挺括透明面料,适合结构化设计"
       },
       "suitable_structures": [
         "collar",
@@ -115,7 +115,7 @@
       },
       "notes": {
         "en": "Smooth, lustrous fabric with elegant drape",
-        "zh": "光滑有光泽面料，优雅垂坠"
+        "zh": "光滑有光泽面料,优雅垂坠"
       },
       "suitable_structures": [
         "collar",
@@ -144,7 +144,7 @@
       },
       "notes": {
         "en": "Fine netting fabric perfect for formal wear",
-        "zh": "精细网状面料，适合正装"
+        "zh": "精细网状面料,适合正装"
       },
       "suitable_structures": [
         "collar",
@@ -180,7 +180,7 @@
       },
       "notes": {
         "en": "Textured wool fabric classic for tailored garments",
-        "zh": "纹理羊毛面料，经典定制服装"
+        "zh": "纹理羊毛面料,经典定制服装"
       },
       "suitable_structures": [
         "collar",
@@ -217,7 +217,7 @@
       },
       "notes": {
         "en": "Durable cotton fabric perfect for casual wear",
-        "zh": "耐用棉面料，适合休闲装"
+        "zh": "耐用棉面料,适合休闲装"
       },
       "suitable_structures": [
         "pants",
@@ -247,7 +247,7 @@
       },
       "notes": {
         "en": "Natural wool fabric warm and comfortable",
-        "zh": "天然羊毛面料，保暖舒适"
+        "zh": "天然羊毛面料,保暖舒适"
       },
       "suitable_structures": [
         "coat",
@@ -279,7 +279,7 @@
       },
       "notes": {
         "en": "Luxurious natural silk with excellent drape",
-        "zh": "奢华天然真丝，优异垂坠"
+        "zh": "奢华天然真丝,优异垂坠"
       },
       "suitable_structures": [
         "collar",
@@ -310,7 +310,7 @@
       },
       "notes": {
         "en": "Natural linen fabric perfect for summer wear",
-        "zh": "天然亚麻面料，适合夏季服装"
+        "zh": "天然亚麻面料,适合夏季服装"
       },
       "suitable_structures": [
         "bodice",
@@ -340,7 +340,7 @@
       },
       "notes": {
         "en": "Luxurious pile fabric ideal for formal occasions",
-        "zh": "奢华绒毛面料，适合正式场合"
+        "zh": "奢华绒毛面料,适合正式场合"
       },
       "suitable_structures": [
         "collar",

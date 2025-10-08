@@ -15,7 +15,7 @@
   {
     "key": "crepe_de_chine",
     "display_name": {"zh": "双绉", "en": "Crepe de Chine"},
-    "notes": {"zh": "细皱纹理，垂坠感好", "en": "Fine crinkled texture with good drape"},
+    "notes": {"zh": "细皱纹理,垂坠感好", "en": "Fine crinkled texture with good drape"},
     "suitable_structures": ["bodice","skirt"],
     "signature_rules": [
       {"feat":"gabor_anisotropy", "op":"<", "val":0.4, "score":1.0}
@@ -28,7 +28,7 @@
   {
     "key": "chiffon",
     "display_name": {"zh": "雪纺", "en": "Chiffon"},
-    "notes": {"zh": "轻薄半透明，柔软", "en": "Lightweight, semi-transparent and soft"},
+    "notes": {"zh": "轻薄半透明,柔软", "en": "Lightweight, semi-transparent and soft"},
     "suitable_structures": ["bodice","skirt","sleeve"],
     "signature_rules": [
       {"feat":"hole_ratio", "op":">", "val":0.15, "score":1.5}
@@ -41,7 +41,7 @@
   {
     "key": "georgette",
     "display_name": {"zh": "乔其纱", "en": "Georgette"},
-    "notes": {"zh": "细颗粒感，轻薄", "en": "Slightly grainy, lightweight"},
+    "notes": {"zh": "细颗粒感,轻薄", "en": "Slightly grainy, lightweight"},
     "suitable_structures": ["bodice","skirt"],
     "signature_rules": [
       {"feat":"laplacian_var_norm", "op":"<", "val":0.35, "score":1.0}

@@ -44,7 +44,7 @@ try:
     HAS_IC = True
 except Exception:
     HAS_IC = False
-HAS_CANVAS = False  # 强制关闭画布回退（高效方案 B）
+HAS_CANVAS = False  # 强制关闭画布回退(高效方案 B)
 try:
     from src.utils.coords import make_preview, map_simple_scale
 except Exception:
@@ -122,9 +122,9 @@ try:
 except Exception:
     from src.utils.errors import swallow  # type: ignore
 
-# =============== 闂傚倸鐗勯崹鍝勵熆濮椻偓瀵増銈ｉ崘鈺婂悈閻庢鍠掗崑鎾绘煕韫囨洦鍔滅紒杈ㄧ懅閹奉偊宕橀鐘承﹂梺姹囧焺閻撳妲?===============
-# =============== 闂傚牄鍨哄姗€寮版ィ鍐╊吅鐎殿喒鍋撻柛蹇曨劜缁辨瑧鎷崘顓犳Ц闁汇埄鐓夌槐?===============
-SHOW_ATTRS = False  # 濮掓稒顭堥濠氭⒕閹邦垱顥戦柍銉︾矋椤ュ懎霉鐎ｎ亜鐓傞柣銊ュ閻﹢骞€瑜夐埀顒佺箞濞间即寮堕崠锛勫耿閻犲鍟抽惁顖炲籍鐠哄搫璁查柡鈧柅娑滅 True
+# =============== Global UI switches ===============
+# =============== Attribute panel & layout ===============
+SHOW_ATTRS = False  # Toggle to show extracted attributes panel; set True to display
 
 # =============== Image loading helper ===============
 def load_uploaded_image(uploaded_file, max_side: int = DEFAULT_MAX_SIDE):
@@ -146,7 +146,7 @@ def load_uploaded_image(uploaded_file, max_side: int = DEFAULT_MAX_SIDE):
 
     return img
 
-# ================= 濡炪倗鏁诲浼存煀瀹ュ洨鏋?=================
+# ================= Page layout (moved earlier) =================
 # moved to top with layout="wide"
 
 # =============== Inject UI CSS ===============
@@ -160,7 +160,7 @@ def _inject_css():
 
 _inject_css()
 
-# ================= 闂佹悶鍎扮划娆忣瀶椤栫偛绀岄柡宥庡幖鐢娊鏌?=================
+# ================= Language initialization =================
 # Initialize language in session state with default zh
 if "lang" not in st.session_state:
     st.session_state["lang"] = "zh"
@@ -188,7 +188,7 @@ def get_current_lang() -> str:
     return st.session_state["lang"]
 
 
-# ================= 缂傚倷鐒﹂幐濠氭倵椤栨娑㈠焵椤掆偓闇夐悗锝庝簻缁愭霉閿濆懐肖濠殿喗鎮傞弫?=================
+# ================= Session defaults for structures & caches =================
 if "struct_conf" not in st.session_state:
     st.session_state["struct_conf"] = {}
 if "struct_set" not in st.session_state:
@@ -255,10 +255,10 @@ ok, errs = validate_fabric_rules(str(Path(__file__).resolve().parents[0] / "data
 if not ok:
     st.error(t("msg.validation_failed", get_current_lang()))
 
-st.title("棣冩啿 " + t("app.title", get_current_lang()))
+st.title(t("app.title", get_current_lang()))
 st.caption(t("app.subtitle", get_current_lang()))
 
-# ================= 娓氀嗙珶閺嶅骏绱伴弶鍐櫢鐠嬪啳濡?=================
+# ================= Weights controls =================
 st.sidebar.header("閳挎瑱绗?" + t("sidebar.weight_header", get_current_lang()))
 w_color = st.sidebar.slider(t("sidebar.color_weight", get_current_lang()), 0.0, 1.0, 0.5, 0.01)
 w_sheen = st.sidebar.slider(t("sidebar.sheen_weight", get_current_lang()), 0.0, 1.0, 0.3, 0.01)
@@ -273,6 +273,7 @@ weights = {
 }
 
 with st.sidebar.expander(t("sidebar.exp_weight", get_current_lang())):
+    # Debug block removed
     st.write(weights)
 
 if st.sidebar.button(t("sidebar.save_default", get_current_lang())):
@@ -295,7 +296,7 @@ if USE_PACKS:
         st.sidebar.warning(f"packs disabled: {e}")
 
 # Hybrid (region + local) controls
-st.sidebar.header("濡絽鍞?" + t("ui.hybrid.title", get_current_lang()))
+st.sidebar.header(t("ui.hybrid.title", get_current_lang()))
 hy_enabled = st.sidebar.checkbox(t("ui.hybrid.enabled", get_current_lang()), value=bool(st.session_state.get("hybrid", {}).get("enabled", True)))
 hy_radius = st.sidebar.slider(t("ui.hybrid.radius", get_current_lang()), 9, 49, int(st.session_state.get("hybrid", {}).get("radius", 21)), 2)
 hy_alpha = st.sidebar.slider(t("ui.hybrid.alpha", get_current_lang()), 0.0, 1.0, float(st.session_state.get("hybrid", {}).get("alpha", 0.7)), 0.01)
@@ -358,8 +359,8 @@ with st.sidebar.expander("Patch Annotation"):
         top1 = lp.get("top1") or ""
         top2 = lp.get("top2") or ""
         st.caption(f"Last patch: {Path(lp.get('png','')).name}")
-        choice = st.radio(t("ui.label_as"), options=[f"Top1: {top1}", f"Top2: {top2}", "Other…"], index=0)
-        other_key = st.text_input("Fabric key (for Other)", value="" if choice != "Other…" else (lp.get("top1") or ""))
+        choice = st.radio(t("ui.label_as"), options=[f"Top1: {top1}", f"Top2: {top2}", "Other..."], index=0)
+        other_key = st.text_input("Fabric key (for Other)", value="" if choice != "Other..." else (lp.get("top1") or ""))
         if st.button(t("ui.submit_label")):
             try:
                 png_src = Path(lp.get("png"))
@@ -397,7 +398,7 @@ with st.sidebar.expander("Patch Annotation"):
             except Exception as e:
                 st.error(f"{t('ui.error_save_failed')}: {e}")
 
-# ================= 婵炴垶鎹侀褎鎱ㄥ☉銏″殑闁芥ê顦梾?=================
+# ================= File upload =================
 uploaded_file = st.file_uploader(t("main.uploader", get_current_lang()), type=["jpg", "jpeg", "png"], accept_multiple_files=False)
 if uploaded_file is not None and getattr(uploaded_file, 'size', None) is not None:
     if uploaded_file.size > 20 * 1024 * 1024:
@@ -407,16 +408,18 @@ if uploaded_file is not None and getattr(uploaded_file, 'size', None) is not Non
 if uploaded_file is None:
     st.stop()
 else:
-    # 閸樼喎娴樻稉搴暕鐟欏牞绱欓崶鍝勭暰鐎硅棄瀹抽敍澶涚礉閻劋绨悙鐟板毊閺勭姴鐨?    image = load_uploaded_image(uploaded_file, max_side=DEFAULT_MAX_SIDE)
+    # Load and preprocess image
+    image = load_uploaded_image(uploaded_file, max_side=DEFAULT_MAX_SIDE)
     preview_pil, orig_w, orig_h = make_preview(image, PREVIEW_WIDTH)
     disp_w, disp_h = preview_pil.width, preview_pil.height
 
-    # 娑撱倕鍨敮鍐ㄧ湰閿涘牏瀹?37% / 63%閿?    col_left, col_right = st.columns([3, 5], gap="small")
+    # Legacy 37%/63% split (kept for reference)
+    col_left, col_right = st.columns([3, 5], gap="small")
 
-    # 涓ゅ垪甯冨眬锛?0 / 50锛夛紝鍥哄畾闂磋窛
+    # Two-column layout 50/50, fixed gap
     col_left, col_right = st.columns([1, 1], gap="medium")
 
-    # 鍒濆鍖栧苟鏋勫缓绱㈠紩锛堟棤杩涘害鏉℃樉绀猴級
+    # Generate mask (no progress indicator)
     try:
         mask, _ = get_foreground_mask(image)
     except Exception:
@@ -480,7 +483,7 @@ else:
         if "region_index" not in st.session_state:
             st.session_state["region_index"] = {}
 
-    # ---------------- 闁汇埄鍨伴崯顐︽儑椤掆偓閵嗘帡宕ｆ径灞藉脯 ----------------
+    # ---------------- Left/Right panels ----------------
     with col_left:
         # Left: single clickable image
         if not HAS_IC:
@@ -488,7 +491,7 @@ else:
             st.stop()
         st.caption(t("layout.click_hint", get_current_lang()))
         click_x = click_y = None
-        # 闂勬劕鍩楁稉璇叉禈鐎圭懓娅掓妯哄閿涘矁绉撮崙鐑樼泊閸旑煉绱欐禒鍛箯閸掓鍞撮柈銊︾泊閸旑煉绱?        st.markdown('<div class="left-pane"><div class="left-scroll">', unsafe_allow_html=True)
+        st.markdown('<div class="left-pane"><div class="left-scroll">', unsafe_allow_html=True)
         with swallow(t("ui.error_click_capture")):
             res = ic.streamlit_image_coordinates(preview_pil, key="imgcoords")
             if res is not None and "x" in res and "y" in res:
@@ -517,7 +520,7 @@ else:
             hist.append({"x": int(x0), "y": int(y0), "t": ts})
             st.session_state["click_history"] = hist[-5:]
 
-        # Card 1: coordinates & time
+        # Card 1: coordinates & time (always shown)
         st.markdown('<div class="card">', unsafe_allow_html=True)
         st.markdown("### " + t("panel.right_title", get_current_lang()))
         cx, cy = st.session_state.get("click_xy", (None, None))
@@ -526,8 +529,12 @@ else:
             if st.session_state.get("click_history"):
                 st.caption(st.session_state.get("click_history")[-1].get("t", ""))
         else:
-            st.caption(t("region.unavailable", get_current_lang()))
+            st.caption(t("panel.region_info_unavailable", get_current_lang()))
         st.markdown('</div>', unsafe_allow_html=True)
+
+        # Card 2: Top-K (title always shown, content conditional)
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        st.markdown("### " + t("panel.topk_title", get_current_lang()))
 
         if click_x is not None and click_y is not None and labels is not None:
             # Convert original-space coordinates to labels-space via stored scale
@@ -540,160 +547,171 @@ else:
                 st.session_state["last_region_id"] = None
             else:
                 st.session_state["last_region_id"] = int(rid)
-
-                # Card 2: Top-K
-                st.markdown('<div class="card">', unsafe_allow_html=True)
-                st.markdown("### " + t("panel.topk_title", get_current_lang()))
                 items = reg_index.get("topk", {}).get(int(rid), [])
                 if not items:
                     st.caption(t("sidebar.no_entries", get_current_lang()))
                 else:
-                        # Compute confidence metrics based on fused/region scores
-                        # Build score dict for Top-K list
-                        scores_dict = {str(n): float(s) for (n, s, *_e) in items}
-                        # Try fetch logreg prob for Top1 (optional)
-                        # conf_rule = (Top1-Top2)/max(Top1,eps) + strong_hits_ratio
-                        sorted_pairs = sorted(scores_dict.items(), key=lambda kv: kv[1], reverse=True)
-                        eps = 1e-6
-                        if sorted_pairs:
-                            top1_name, top1_score = sorted_pairs[0]
-                            top2_score = sorted_pairs[1][1] if len(sorted_pairs) > 1 else 0.0
-                            diff_ratio = (top1_score - top2_score) / max(top1_score, eps)
-                        else:
-                            top1_name, top1_score, diff_ratio = "", 0.0, 0.0
-                        # strong rule hits ratio if available
-                        strong_ratio = 0.0
-                        # try read from region features explain cache (not available here), keep 0.0
-                        conf_rule_total = float(diff_ratio + strong_ratio)
-                        # logreg prob best-effort from calibrator
+                    # Compute confidence metrics based on fused/region scores
+                    # Build score dict for Top-K list
+                    scores_dict = {str(n): float(s) for (n, s, *_e) in items}
+                    # Try fetch logreg prob for Top1 (optional)
+                    # conf_rule = (Top1-Top2)/max(Top1,eps) + strong_hits_ratio
+                    sorted_pairs = sorted(scores_dict.items(), key=lambda kv: kv[1], reverse=True)
+                    eps = 1e-6
+                    if sorted_pairs:
+                        top1_name, top1_score = sorted_pairs[0]
+                        top2_score = sorted_pairs[1][1] if len(sorted_pairs) > 1 else 0.0
+                        diff_ratio = (top1_score - top2_score) / max(top1_score, eps)
+                    else:
+                        top1_name, top1_score, diff_ratio = "", 0.0, 0.0
+                    # strong rule hits ratio if available
+                    strong_ratio = 0.0
+                    # try read from region features explain cache (not available here), keep 0.0
+                    conf_rule_total = float(diff_ratio + strong_ratio)
+                    # logreg prob best-effort from calibrator
+                    conf_logreg = 0.0
+                    try:
+                        from src.calibrator import load_logreg as _load_logreg
+                        feat_low = reg_index.get("features", {}).get(int(rid), {}).get("features", {})
+                        probs = _load_logreg()(feat_low)
+                        if probs and top1_name:
+                            conf_logreg = float(probs.get(str(top1_name), 0.0))
+                    except Exception:
                         conf_logreg = 0.0
-                        try:
-                            from src.calibrator import load_logreg as _load_logreg
-                            feat_low = reg_index.get("features", {}).get(int(rid), {}).get("features", {})
-                            probs = _load_logreg()(feat_low)
-                            if probs and top1_name:
-                                conf_logreg = float(probs.get(str(top1_name), 0.0))
-                        except Exception:
-                            conf_logreg = 0.0
-                        conf_total = float(0.6 * conf_rule_total + 0.4 * conf_logreg) if conf_logreg > 0.0 else float(conf_rule_total)
-                        # Prepare light tips for Card 3
-                        conf_tip_text = t("panel.low_confidence_tip", get_current_lang()) if conf_total < 0.35 else ""
-                        fam = ""
-                        if conf_total < 0.2:
-                            if top1_name:
-                                key = top1_name.lower()
-                                if any(k in key for k in ["satin","taffeta","charmeuse"]):
-                                    fam = t("family.sheen", get_current_lang())
-                                elif any(k in key for k in ["tweed","herringbone","denim","twill"]):
-                                    fam = t("family.twill", get_current_lang())
-                                elif any(k in key for k in ["organza","chiffon","georgette","tulle","lace"]):
-                                    fam = t("family.sheer", get_current_lang())
-                                elif any(k in key for k in ["velvet","corduroy","suede","fleece"]):
-                                    fam = t("family.pile", get_current_lang())
-                                elif any(k in key for k in ["jersey","rib","interlock","ponte"]):
-                                    fam = t("family.knit", get_current_lang())
-                        coarse_text = f"{t('panel.coarse_suggestion_label', get_current_lang())}: {fam or '-'}" if fam else ""
+                    conf_total = float(0.6 * conf_rule_total + 0.4 * conf_logreg) if conf_logreg > 0.0 else float(conf_rule_total)
+                    # Prepare light tips for Card 3
+                    conf_tip_text = t("panel.low_confidence_tip", get_current_lang()) if conf_total < 0.35 else ""
+                    fam = ""
+                    if conf_total < 0.2:
+                        if top1_name:
+                            key = top1_name.lower()
+                            if any(k in key for k in ["satin","taffeta","charmeuse"]):
+                                fam = t("family.sheen", get_current_lang())
+                            elif any(k in key for k in ["tweed","herringbone","denim","twill"]):
+                                fam = t("family.twill", get_current_lang())
+                            elif any(k in key for k in ["organza","chiffon","georgette","tulle","lace"]):
+                                fam = t("family.sheer", get_current_lang())
+                            elif any(k in key for k in ["velvet","corduroy","suede","fleece"]):
+                                fam = t("family.pile", get_current_lang())
+                            elif any(k in key for k in ["jersey","rib","interlock","ponte"]):
+                                fam = t("family.knit", get_current_lang())
+                    coarse_text = f"{t('panel.coarse_suggestion_label', get_current_lang())}: {fam or '-'}" if fam else ""
 
-                        for i, (name, score, explain) in enumerate(items, 1):
-                            disp, notes = localize_fabric(name, get_current_lang())
-                            score_label = t("candidates.score", get_current_lang())
-                            # Unified single-row: idx. name 閳ユ柡鈧?鐠囧嫬鍨?1.00 (score weak-emphasis via CSS)
-                            st.markdown(
-                                f"<div class='row'><span class='idx'>{i}.</span><span class='name'>{disp} 閳ユ柡鈧?/span><span class='score'>{score_label} {score:.2f}</span></div>",
-                                unsafe_allow_html=True,
-                            )
-                            # Optional short explain summary
-                            if isinstance(explain, dict):
-                                comps = explain.get("components", {})
-                                if comps:
-                                    st.markdown(
-                                        f"<div class='desc'>{t('region.explain', get_current_lang()).format(color=str(comps.get('color','-')), coverage=str(comps.get('coverage','-')))}</div>",
-                                        unsafe_allow_html=True,
-                                    )
-                            # Optional notes, truncated and indented
-                            if notes:
-                                max_len = 30
-                                note_snip = notes if len(notes) <= max_len else notes[:max_len] + "…"
-                                st.markdown(f"<div class='desc'>{note_snip}</div>", unsafe_allow_html=True)
+                    for i, (name, score, explain) in enumerate(items, 1):
+                        disp, notes = localize_fabric(name, get_current_lang())
+                        score_label = t("candidates.score", get_current_lang())
+                        # Unified single-row: index, name and score (score weak-emphasis via CSS)
+                        st.markdown(
+                            f"<div class='row'><span class='idx'>{i}.</span><span class='name'>{disp}</span><span class='score'>{score_label} {score:.2f}</span></div>",
+                            unsafe_allow_html=True,
+                        )
+                        # Optional short explain summary
+                        if isinstance(explain, dict):
+                            comps = explain.get("components", {})
+                            if comps:
+                                st.markdown(
+                                    f"<div class='desc'>{t('region.explain', get_current_lang()).format(color=str(comps.get('color','-')), coverage=str(comps.get('coverage','-')))}</div>",
+                                    unsafe_allow_html=True,
+                                )
+                        # Optional notes, truncated and indented
+                        if notes:
+                            max_len = 30
+                            note_snip = notes if len(notes) <= max_len else notes[:max_len] + "..."
+                            st.markdown(f"<div class='desc'>{note_snip}</div>", unsafe_allow_html=True)
 
-                        # (Card 3 and Card 4 will render after closing this Top-K card)
+                    # (Card 3 and Card 4 will render after closing this Top-K card)
 
-                        # ---- Y2: Save unlabeled region patch + sidecar JSON ----
-                        try:
-                            regions = reg_index.get("regions", {})
-                            info = regions.get(int(rid), {})
-                            bx, by, bw, bh = [int(v) for v in (info.get("bbox") or (0, 0, img_small.shape[1], img_small.shape[0]))]
-                            pad = 3
-                            Hs, Ws = img_small.shape[:2]
-                            x0 = max(0, bx - pad)
-                            y0 = max(0, by - pad)
-                            x1 = min(Ws, bx + bw + pad)
-                            y1 = min(Hs, by + bh + pad)
-                            crop = img_small[y0:y1, x0:x1].copy()
-                            # Ensure directories
-                            project_root = Path(__file__).resolve().parents[0]
-                            unlabeled_dir = project_root / "data" / "patches" / "unlabeled"
-                            unlabeled_dir.mkdir(parents=True, exist_ok=True)
-                            # Filename
-                            ts = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-                            base_name = f"{ts}_region{int(rid)}"
-                            png_path = unlabeled_dir / f"{base_name}.png"
-                            json_path = unlabeled_dir / f"{base_name}.json"
-                            # Save image (BGR)
-                            cv2.imwrite(str(png_path), crop)
-                            # Build sidecar content
-                            topk_simple = [[str(n), float(s)] for (n, s, *_e) in items[:5]]
-                            feat = reg_index.get("features", {}).get(int(rid), {})
-                            # Best-effort numeric conversion for JSON
-                            def _to_jsonable(v):
-                                try:
-                                    import numpy as _np
-                                    if isinstance(v, (_np.floating, _np.integer)):
-                                        return float(v)
-                                except Exception:
-                                    pass
-                                if isinstance(v, (int, float, str)):
-                                    return v
-                                return str(v)
-                            feat_json = {k: _to_jsonable(v) for k, v in (feat or {}).items()}
-                            sidecar = {
-                                "region_id": int(rid),
-                                "click_xy": [int(st.session_state.get("click_xy", (0, 0))[0]), int(st.session_state.get("click_xy", (0, 0))[1])],
-                                "topk": topk_simple,
-                                "features": feat_json,
-                                "saved_at": ts,
-                            }
-                            with open(json_path, "w", encoding="utf-8") as f:
-                                json.dump(sidecar, f, ensure_ascii=False, indent=2)
-                            print(f"[patch] saved image: {png_path}")
-                            print(f"[patch] saved meta : {json_path}")
-                            # Stash last patch info for annotation UI
-                            top1 = topk_simple[0][0] if len(topk_simple) >= 1 else ""
-                            top2 = topk_simple[1][0] if len(topk_simple) >= 2 else ""
-                            st.session_state["last_patch"] = {
-                                "png": str(png_path),
-                                "json": str(json_path),
-                                "top1": top1,
-                                "top2": top2,
-                            }
-                        except Exception as _e:
-                            print(f"[patch] save failed: {_e}")
+                    # ---- Y2: Save unlabeled region patch + sidecar JSON ----
+                    try:
+                        regions = reg_index.get("regions", {})
+                        info = regions.get(int(rid), {})
+                        bx, by, bw, bh = [int(v) for v in (info.get("bbox") or (0, 0, img_small.shape[1], img_small.shape[0]))]
+                        pad = 3
+                        Hs, Ws = img_small.shape[:2]
+                        x0 = max(0, bx - pad)
+                        y0 = max(0, by - pad)
+                        x1 = min(Ws, bx + bw + pad)
+                        y1 = min(Hs, by + bh + pad)
+                        crop = img_small[y0:y1, x0:x1].copy()
+                        # Ensure directories
+                        project_root = Path(__file__).resolve().parents[0]
+                        unlabeled_dir = project_root / "data" / "patches" / "unlabeled"
+                        unlabeled_dir.mkdir(parents=True, exist_ok=True)
+                        # Filename
+                        ts = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+                        base_name = f"{ts}_region{int(rid)}"
+                        png_path = unlabeled_dir / f"{base_name}.png"
+                        json_path = unlabeled_dir / f"{base_name}.json"
+                        # Save image (BGR)
+                        cv2.imwrite(str(png_path), crop)
+                        # Build sidecar content
+                        topk_simple = [[str(n), float(s)] for (n, s, *_e) in items[:5]]
+                        feat = reg_index.get("features", {}).get(int(rid), {})
+                        # Best-effort numeric conversion for JSON
+                        def _to_jsonable(v):
+                            try:
+                                import numpy as _np
+                                if isinstance(v, (_np.floating, _np.integer)):
+                                    return float(v)
+                            except Exception:
+                                pass
+                            if isinstance(v, (int, float, str)):
+                                return v
+                            return str(v)
+                        feat_json = {k: _to_jsonable(v) for k, v in (feat or {}).items()}
+                        sidecar = {
+                            "region_id": int(rid),
+                            "click_xy": [int(st.session_state.get("click_xy", (0, 0))[0]), int(st.session_state.get("click_xy", (0, 0))[1])],
+                            "topk": topk_simple,
+                            "features": feat_json,
+                            "saved_at": ts,
+                        }
+                        with open(json_path, "w", encoding="utf-8") as f:
+                            json.dump(sidecar, f, ensure_ascii=False, indent=2)
+                        print(f"[patch] saved image: {png_path}")
+                        print(f"[patch] saved meta : {json_path}")
+                        # Stash last patch info for annotation UI
+                        top1 = topk_simple[0][0] if len(topk_simple) >= 1 else ""
+                        top2 = topk_simple[1][0] if len(topk_simple) >= 2 else ""
+                        st.session_state["last_patch"] = {
+                            "png": str(png_path),
+                            "json": str(json_path),
+                            "top1": top1,
+                            "top2": top2,
+                        }
+                    except Exception as _e:
+                        print(f"[patch] save failed: {_e}")
+        else:
+            # No click or region data available
+            st.caption(t("panel.region_info_unavailable", get_current_lang()))
 
-                st.markdown('</div>', unsafe_allow_html=True)
+        # Close Card 2 (Top-K)
+        st.markdown('</div>', unsafe_allow_html=True)
 
-                # Card 3: 置信度与建议
-                if (locals().get('conf_tip_text') or locals().get('coarse_text')):
-                    st.markdown('<div class="card">', unsafe_allow_html=True)
-                    st.markdown("### " + t("panel.confidence_title", get_current_lang()))
-                    if locals().get('conf_tip_text'):
-                        st.markdown(f"<div class='caption'>{conf_tip_text}</div>", unsafe_allow_html=True)
-                    if locals().get('coarse_text'):
-                        st.markdown(f"<div class='caption'>{coarse_text}</div>", unsafe_allow_html=True)
-                    st.markdown('</div>', unsafe_allow_html=True)
+        # Card 3: Confidence & Suggestions (title always shown, content conditional)
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        st.markdown("### " + t("panel.confidence_title", get_current_lang()))
+        if click_x is not None and click_y is not None and labels is not None:
+            rid = st.session_state.get("last_region_id")
+            if rid is not None:
+                if locals().get('conf_tip_text'):
+                    st.markdown(f"<div class='caption'>{conf_tip_text}</div>", unsafe_allow_html=True)
+                if locals().get('coarse_text'):
+                    st.markdown(f"<div class='caption'>{coarse_text}</div>", unsafe_allow_html=True)
+                if not locals().get('conf_tip_text') and not locals().get('coarse_text'):
+                    st.caption(t("sidebar.no_entries", get_current_lang()))
+            else:
+                st.caption(t("panel.region_info_unavailable", get_current_lang()))
+        else:
+            st.caption(t("panel.region_info_unavailable", get_current_lang()))
+        st.markdown('</div>', unsafe_allow_html=True)
 
-                # Card 4: 操作
-                st.markdown('<div class="card">', unsafe_allow_html=True)
-                st.markdown("### " + t("panel.actions_title", get_current_lang()))
+        # Card 4: Actions (title always shown, buttons conditional)
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        st.markdown("### " + t("panel.actions_title", get_current_lang()))
+        if click_x is not None and click_y is not None and labels is not None:
+            rid = st.session_state.get("last_region_id")
+            if rid is not None:
                 st.markdown('<div class="btn-row">', unsafe_allow_html=True)
                 col_a, col_b = st.columns(2, gap="small")
                 with col_a:
@@ -707,8 +725,16 @@ else:
                 with col_b:
                     st.button(t("panel.btn_vote_up", get_current_lang()), key=f"vote_up_{rid}")
                 st.markdown('</div>', unsafe_allow_html=True)
-                st.markdown('</div>', unsafe_allow_html=True)
-                # Local refinement features + fused recommendation
+            else:
+                st.caption(t("panel.region_info_unavailable", get_current_lang()))
+        else:
+            st.caption(t("panel.region_info_unavailable", get_current_lang()))
+        st.markdown('</div>', unsafe_allow_html=True)
+
+        # Local refinement features + fused recommendation (only if region clicked)
+        if click_x is not None and click_y is not None and labels is not None:
+            rid = st.session_state.get("last_region_id")
+            if rid is not None:
                 try:
                     hcfg = st.session_state.get("hybrid", {"enabled": True, "radius": 21, "alpha": 0.7})
                     if not hcfg.get("enabled", True):
@@ -756,12 +782,12 @@ else:
                         else:
                             fused = fuse_region_and_local_scores(region_scores, local_scores, float(hcfg.get("alpha", 0.7)))
                         fused_sorted = sorted(fused.items(), key=lambda kv: kv[1].get("total", 0.0), reverse=True)[:5]
-                        st.markdown("#### 闂?" + t("ui.hybrid.title", get_current_lang()))
+                        st.markdown("#### " + t("ui.hybrid.title", get_current_lang()))
                         st.caption(t("ui.hybrid.tip_refined", get_current_lang()))
                         for i, (fname, finfo) in enumerate(fused_sorted, 1):
                             disp, notes = localize_fabric(fname, get_current_lang())
                             score_label = t("candidates.score", get_current_lang())
-                            st.write(f"{i}. **{disp}** 闂?{score_label}: **{finfo.get('total', 0.0):.2f}**")
+                            st.write(f"{i}. **{disp}** — {score_label}: **{finfo.get('total', 0.0):.2f}**")
                         try:
                             reg_top3 = sorted([(k, v.get('total', 0.0)) for k, v in region_scores.items()], key=lambda x: x[1], reverse=True)[:3]
                             loc_top3 = sorted([(n, s) for (n, s, *_e) in local_scores], key=lambda x: x[1], reverse=True)[:3]
@@ -771,7 +797,8 @@ else:
                             pass
                 except Exception:
                     pass
-        # Recent clicks card
+
+        # Recent clicks card (always shown)
         st.markdown('<div class="card">', unsafe_allow_html=True)
         st.markdown("#### " + t("panel.recent_clicks_label", get_current_lang()))
         for item in reversed(st.session_state.get("click_history", [])):
@@ -831,18 +858,18 @@ else:
                 display_name = name
             # 分数标签
             score_label = t("candidates.score", get_current_lang())
-            # 第一行：名称 + 分数
+            # 第一行:名称 + 分数
             st.write(f"{i}. **{display_name}** — {score_label}: **{score:.2f}**")
-            # 第二行：描述（可选，截断）
+            # 第二行:描述(可选,截断)
             if notes and isinstance(notes, str) and notes.strip():
                 max_len = 30
                 truncate_point = max_len
-                for punct in ['。', '.', '，', ',', '；', ';']:
+                for punct in ['。', '.', ',', ',', ';', ';']:
                     punct_pos = notes.find(punct, 0, max_len)
                     if punct_pos > 0:
                         truncate_point = punct_pos + 1
                         break
-                note_snip = notes if len(notes) <= max_len else notes[:truncate_point] + "…"
+                note_snip = notes if len(notes) <= max_len else notes[:truncate_point] + "..."
                 desc_label = t("candidates.description", get_current_lang())
                 st.caption(f"*{desc_label}: {note_snip}*")
         else:
@@ -851,4 +878,4 @@ else:
             score_label = t("candidates.score", get_current_lang())
             st.write(f"{i}. **{name}** — {score_label}: **{score:.2f}**")
 
-    # 旧调试蒙版渲染已禁用，避免重复大图渲染
+    # 旧调试蒙版渲染已禁用,避免重复大图渲染

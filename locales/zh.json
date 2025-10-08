@@ -1,113 +1,115 @@
 {
   "app": {
-    "title": "AI 閺堝秷顥婇棃銏℃灐閸掑棙鐎界敮?,
-    "subtitle": "閺呴缚鍏橀棃銏℃灐閸掑棙鐎芥稉搴㈠腹閼芥劗閮寸紒?
+    "title": "AI面料识别推荐助手",
+    "subtitle": "上传服装图片,智能分析推荐合适面料"
   },
   "sidebar": {
-    "language": "鐠囶叀鈻?,
-    "weight_header": "閹垫挸鍨庨弶鍐櫢",
-    "color_weight": "妫版粏澹婇弶鍐櫢",
-    "sheen_weight": "閸忓杈伴弶鍐櫢",
-    "texture_weight": "缁惧湱鎮婇弶鍐櫢",
-    "exp_weight": "瑜版挸澧犻弶鍐櫢",
-    "save_default": "娣囨繂鐡ㄦ稉娲帛鐠?,
-    "saved_msg": "閺夊啴鍣告穱婵嗙摠閹存劕濮涢敍?,
-    "use_fine": "娴ｈ法鏁ょ紒鍡欑煈鎼达箓娼伴弬娆忕氨",
-    "fabric_preview": "闂堛垺鏋℃惔鎿勭礄缂佸棛鐭戞惔锔肩礆妫板嫯顫?,
-    "search_placeholder": "閹兼粎鍌ㄩ棃銏℃灐...",
-    "col_name": "閸氬秶袨",
-    "col_alias": "閸掝偄鎮?,
-    "col_sheen": "閸忓杈伴懠鍐ㄦ纯",
-    "col_edge": "鏉堝湱绱懠鍐ㄦ纯",
-    "col_notes": "婢跺洦鏁?,
-    "no_entries": "閺堫亝澹橀崚鏉垮爱闁板秶娈戦棃銏℃灐"
+    "language": "语言",
+    "weight_header": "权重设置",
+    "color_weight": "颜色权重",
+    "sheen_weight": "光泽权重",
+    "texture_weight": "纹理权重",
+    "exp_weight": "高级权重配置",
+    "save_default": "保存为默认",
+    "saved_msg": "已保存!",
+    "use_fine": "使用精细面料库",
+    "fabric_preview": "面料库(精细)预览",
+    "search_placeholder": "搜索面料...",
+    "col_name": "名称",
+    "col_alias": "别名",
+    "col_sheen": "光泽范围",
+    "col_edge": "边缘范围",
+    "col_notes": "说明",
+    "no_entries": "未找到匹配的面料"
   },
   "main": {
-    "uploader": "娑撳﹣绱堕張宥堫棅閸ュ墽澧栭敍鍦漃G閵嗕赋NG閿?,
-    "file_size_warning": "閳跨媴绗?閺傚洣娆㈡径褍鐨搾鍛扮箖20MB闂勬劕鍩楅妴鍌濐嚞娑撳﹣绱舵潏鍐ㄧ毈閻ㄥ嫬娴橀悧鍥モ偓?,
-    "processing": "棣冩敡 濮濓絽婀径鍕倞閸ュ墽澧?..",
-    "attributes_title": "濡偓濞村鍩岄惃鍕潣閹?,
-    "candidates_title": "閹恒劏宕橀棃銏℃灐",
-    "mask_toggle": "閺勫墽銇氶幒鈺勫晿鐟曞棛娲婇敍鍫ｇ殶鐠囨洩绱?,
-    "drop_to_start": "棣冩啘 閹锋牗瀚块崶鍓у閸掓媽绻栭柌灞界磻婵鍨庨弸?
+    "uploader": "上传服装图片(JPG、PNG)",
+    "file_size_warning": "文件大小超过 20MB 限制,请上传更小的图片。",
+    "processing": "正在处理图片...",
+    "attributes_title": "检测属性",
+    "candidates_title": "推荐面料",
+    "mask_toggle": "显示掩膜叠加(调试)",
+    "drop_to_start": "将图片拖拽到此处开始分析"
   },
   "candidates": {
-    "score": "閸掑棙鏆?,
-    "description": "鐠囷妇绮忕拠瀛樻"
+    "score": "评分",
+    "description": "说明"
   },
   "attributes": {
-    "dominant_color": "娑撴槒澹婄拫?,
-    "color_hex": "閼规彃褰?,
-    "coverage": "鐟曞棛娲婇悳?,
-    "mask_area": "閹衡晞鍟橀崠鍝勭厵"
+    "dominant_color": "主色调",
+    "color_hex": "颜色代码",
+    "coverage": "覆盖率",
+    "mask_area": "掩膜区域"
   },
   "errors": {
-    "fine_unavailable": "缂佸棛鐭戞惔锕侇潐閸掓瑤绗夐崣顖滄暏閿涙err}閵嗗倸鍑￠崶鐐衡偓鈧崚鎵煐缁帒瀹冲Ο鈥崇础閵?,
-    "validation_failed": "闂堛垺鏋＄憴鍕灟妤犲矁鐦夋径杈Е閵嗗倽顕Λ鈧弻銉潐閸掓瑦鏋冩禒韬测偓?,
-    "upload_error": "閺傚洣娆㈡稉濠佺炊闁挎瑨顕ら妴鍌濐嚞闁插秷鐦妴?,
-    "processing_error": "閸ュ墽澧栨径鍕倞闁挎瑨顕ら妴鍌濐嚞鐏忔繆鐦崗鏈电铂閸ュ墽澧栭妴?
+    "fine_unavailable": "精细规则不可用:{err},已回退到粗粒度模式。",
+    "validation_failed": "面料规则校验失败,请检查规则文件。",
+    "upload_error": "上传文件出错,请重试。",
+    "processing_error": "处理图片出错,请尝试其他图片。"
   },
   "success": {
-    "image_processed": "閸ュ墽澧栨径鍕倞閹存劕濮涢敍?,
-    "weights_saved": "閺夊啴鍣告穱婵嗙摠閹存劕濮涢敍?
+    "image_processed": "图片处理完成!",
+    "weights_saved": "权重保存成功!"
   },
   "info": {
-    "waiting_upload": "缁涘绶熼崶鍓у娑撳﹣绱?..",
-    "select_language": "闁瀚ㄩ幃銊ф畱妫ｆ牠鈧顕㈢懛鈧?,
-    "fabric_library_error": "閺冪姵纭堕崝鐘烘祰闂堛垺鏋℃惔鎿勭窗{error}"
+    "waiting_upload": "等待图片上传...",
+    "select_language": "选择偏好语言",
+    "fabric_library_error": "加载面料库失败:{error}"
   },
   "debug": {
-    "mask_overlay": "閹衡晞鍟橀崣鐘插"
+    "mask_overlay": "掩膜叠加"
   },
   "region": {
-    "section_title": "閸栧搫鐓欓弻銉嚄",
-    "unavailable": "閸栧搫鐓欑槐銏犵穿娑撳秴褰查悽銊ｂ偓?,
-    "click_to_query": "閻愮懓鍤崶鍓у娴犮儲鐓＄拠銏ｎ嚉閸栧搫鐓欓惃?Top-K 闂堛垺鏋￠妴?,
-    "capture_failed": "閺冪姵纭堕幑鏇熷磸閻愮懓鍤敍灞煎閺冨墎鏁ら幍瀣З鏉堟挸鍙嗛崸鎰垼閵?,
-    "input_x": "X 閸ф劖鐖?,
-    "input_y": "Y 閸ф劖鐖?,
-    "coords_label": "閸ф劖鐖ｉ敍?{x}, {y})",
-    "no_region": "瑜版挸澧犳担宥囩枂閺堫亝澹橀崚鏉垮隘閸╃喆鈧?,
-    "topk_title": "閸栧搫鐓?#{rid} 閻?Top-K 閹恒劏宕?,
-    "explain": "妫版粏澹婇敍姝縞olor}閿涘矁顩惄鏍芳閿涙coverage}",
-    "heatmap_toggle": "閺勫墽銇氶棃銏℃灐缂冾喕淇婃惔锔惧劰閸旀稑娴?,
-    "alpha_label": "閻戭厼濮忛崶楣冣偓蹇旀鎼?,
-    "boundary_toggle": "閺勫墽銇氶崠鍝勭厵鏉堝湱鏅?,
-    "slic_fallback": "SLIC 娑撳秴褰查悽顭掔礉瀹告彃娲栭柅鈧崚鎵秹閺嶇厧鍨庨崜灞傗偓?,
-    "out_of_fg": "閻愮懓鍤悙鐟版躬閸撳秵娅欐径鏍电礉鐠囬鍋ｉ崙缁樻箛鐟佸懎灏崺鐔粹偓?
+    "section_title": "区域查询",
+    "unavailable": "区域索引不可用。",
+    "click_to_query": "点击图片查询该区域的 Top-K 面料。",
+    "capture_failed": "无法捕获点击,请手动输入坐标。",
+    "input_x": "X 坐标",
+    "input_y": "Y 坐标",
+    "coords_label": "坐标:({x}, {y})",
+    "no_region": "当前位置未找到有效区域。",
+    "topk_title": "区域 #{rid} 的 Top-K 推荐",
+    "explain": "颜色:{color},覆盖:{coverage}",
+    "heatmap_toggle": "显示面料置信热力图",
+    "alpha_label": "热力图透明度",
+    "boundary_toggle": "显示区域边界",
+    "slic_fallback": "SLIC 不可用,已回退到网格分割。",
+    "out_of_fg": "点击点不在前景内,请点击服装区域。"
   },
   "controls": {
-    "resegment": "闁插秵鏌婇崚鍡楀隘"
+    "resegment": "重新分割"
   },
   "ui": {
     "hybrid": {
-      "title": "鐏炩偓闁劎绮忛崠?,
-      "enabled": "閸氼垳鏁ょ仦鈧柈銊х矎閸?,
-      "radius": "鐏炩偓闁劎鐛ラ崣锝呭磹瀵?,
-      "alpha": "閾诲秴鎮庣化缁樻殶",
-      "tip_cached": "娴ｈ法鏁ょ紓鎾崇摠閻ㄥ嫬灏崺鐔哄瀵颁緤绱濋張顏囆曢崣鎴濈湰闁劑鍣哥粻妞尖偓?,
-      "tip_refined": "瀹告彃顕仦鈧柈銊х崶閸欙絿绮忛崠鏍ц嫙娑撳骸灏崺鐔峰瀻閺佹媽鐎洪崥鍫涒偓?
+      "title": "混合推荐",
+      "enabled": "启用局部细化",
+      "radius": "局部窗口半径",
+      "alpha": "融合比例",
+      "tip_cached": "使用缓存的区域特征,未触发本地重计算。",
+      "tip_refined": "已进行局部细化并融合区域得分。"
     },
     "click": {
-      "hint": "閻愮懓鍤崶鍓у娴犮儵鈧瀚ㄦ担宥囩枂閿涙稓绮嶆禒鏈电瑝閸欘垳鏁ら弮璺虹殺閸ョ偤鈧偓閸掔増澧滈崝銊ㄧ翻閸忋儯鈧?,
-      "fallback": "閺堫亜鐣ㄧ憗鍛讲閻愮懓鍤紒鍕閿涘矁顕€瑰顥婃笟婵婄閸氬酣鍣哥拠鏇樷偓?,
-      "use_canvas": "閺堫亜鐣ㄧ憗?streamlit-image-coordinates閿涘本顒滄担璺ㄦ暏 drawable-canvas 閹规洝骞忛悙鐟板毊閵?,
-      "not_in_region": "瑜版挸澧犻悙閫涚瑝閸︺劍婀侀弫鍫濆隘閸╃喎鍞撮妴?
+      "hint": "点击图片选择位置。",
+      "fallback": "未安装可点击组件,请安装依赖后重试。",
+      "use_canvas": "未安装 streamlit-image-coordinates,使用 drawable-canvas 捕获点击。",
+      "not_in_region": "点击点不在有效区域内。"
     },
     "status": {
-      "loading": "婢跺嫮鎮婃稉?/ Processing...",
-      "ready": "閴?鐏忚京鍗?/ Ready"
+      "loading": "处理中...",
+      "ready": "就绪"
     }
   },
   "msg": {
-    "rules_fallback": "缂佸棛鐭戞惔锕侇潐閸掓瑤绗夐崣顖滄暏閿涘苯鍑￠崶鐐衡偓鈧崚鏉跨唨绾偓鎼?,
-    "file_not_found": "閹靛彞绗夐崚鏉跨箑闂団偓閺傚洣娆?,
-    "json_invalid": "闁板秶鐤嗛弬鍥︽JSON閺嶇厧绱￠弮鐘虫櫏",
-    "validation_failed": "闁板秶鐤嗘宀冪槈婢惰精瑙?,
-    "processing_error": "閸ュ墽澧栨径鍕倞闁挎瑨顕?,
-    "mask_generation_failed": "閸ュ墽澧栭幒鈺勫晿閻㈢喐鍨氭径杈Е",
-    "background_removal_failed": "閼冲本娅欑粔濠氭珟婢惰精瑙?,
-    "attribute_extraction_failed": "鐏炵偞鈧勫絹閸欐牕銇戠拹?,
-    "fabric_recommendation_failed": "闂堛垺鏋￠幒銊ㄥ礃婢惰精瑙?
+    "rules_fallback": "精细规则不可用,已回退到基础库",
+    "file_not_found": "未找到所需文件",
+    "json_invalid": "配置文件 JSON 格式无效",
+    "validation_failed": "配置校验失败",
+    "processing_error": "处理图片出错",
+    "mask_generation_failed": "生成掩膜失败",
+    "background_removal_failed": "背景去除失败",
+    "attribute_extraction_failed": "属性提取失败",
+    "fabric_recommendation_failed": "面料推荐失败"
   }
 }
+
+

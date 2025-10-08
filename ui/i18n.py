@@ -6,7 +6,7 @@ import streamlit as st
 zh = {
     # App
     "app.title": "AI面料识别推荐助手",
-    "app.subtitle": "上传服装图片，智能分析推荐合适面料",
+    "app.subtitle": "上传服装图片,智能分析推荐合适面料",
 
     # Sidebar - language
     "sidebar.language.label": "语言",
@@ -23,7 +23,7 @@ zh = {
     # Sidebar - actions & flags
     "sidebar.save_default": "保存为默认",
     "sidebar.use_fine_rules": "使用精细规则",
-    "sidebar.use_rule_packs": "使用规则包（合并）",
+    "sidebar.use_rule_packs": "使用规则包(合并)",
 
     # Sidebar - hybrid/local refine
     "sidebar.hybrid.title": "混合推荐",
@@ -39,7 +39,7 @@ zh = {
     "panel.coord.label": "坐标",
     "panel.time.label": "时间",
     "panel.topk.title": "推荐面料",
-    "panel.confidence.low": "置信度低，建议采样并标注提升",
+    "panel.confidence.low": "置信度低,建议采样并标注提升",
     "panel.coarse_suggestion.label": "粗粒度建议",
     "panel.actions.save_sample": "保存为训练样本",
     "panel.actions.add_vote": "加入多点投票",
@@ -58,7 +58,8 @@ zh = {
     "sidebar.sheen_weight": "光泽权重",
     "sidebar.texture_weight": "纹理权重",
     "sidebar.exp_weight": "高级权重配置",
-    "sidebar.saved_msg": "已保存！",
+    "sidebar.saved_msg": "已保存!",
+    "sidebar.use_fine": "使用精细面料库",  # alias for sidebar.use_fine_rules
     "sidebar.fabric_preview": "面料预览",
     "sidebar.search_placeholder": "搜索面料...",
     "sidebar.col_name": "名称",
@@ -89,7 +90,7 @@ zh = {
 
     # Region info (compatibility)
     "region.unavailable": "区域信息不可用",  # alias of panel.region_info.unavailable
-    "region.coords_label": "坐标：({x}, {y})",
+    "region.coords_label": "坐标:({x}, {y})",
     "region.explain": "颜色: {color}, 覆盖: {coverage}",
 
     # Candidates
@@ -104,11 +105,31 @@ zh = {
     "family.knit": "针织类",
 
     # Messages
-    "ui.save_success": "已保存（或已存在）",
+    "ui.save_success": "已保存(或已存在)",
     "msg.validation_failed": "配置校验失败",
     "msg.rules_fallback": "已回退到粗粒度规则",
     "msg.mask_generation_failed": "掩膜生成失败",
     "msg.attribute_extraction_failed": "属性提取失败",
+
+    # Missing keys - added for completeness
+    "main.candidates_title": "推荐面料",
+    "panel.right_title": "分析结果",
+    "panel.topk_title": "推荐面料",
+    "panel.confidence_title": "置信度与建议",
+    "panel.region_info_unavailable": "区域信息不可用",
+    "panel.low_confidence_tip": "置信度低,建议采样并标注提升",
+    "panel.coarse_suggestion_label": "粗粒度建议",
+    "panel.actions_title": "操作",
+    "panel.btn_save_training": "保存为训练样本",
+    "panel.btn_vote_up": "加入多点投票",
+    "panel.recent_clicks_label": "最近点击",
+    "ui.error_slic_fallback": "SLIC分割失败",
+    "ui.error_click_capture": "点击捕获失败",
+    "ui.error_image_failed": "图片加载失败",
+    "ui.error_save_failed": "保存失败",
+    "ui.label_as": "标注为",
+    "ui.submit_label": "提交标注",
+    "ui.performance_log": "性能日志",
 }
 
 en = {
@@ -166,6 +187,7 @@ en = {
     "sidebar.texture_weight": "Texture weight",
     "sidebar.exp_weight": "Advanced settings",
     "sidebar.saved_msg": "Saved!",
+    "sidebar.use_fine": "Use Fine-grained Fabric Library",  # alias for sidebar.use_fine_rules
     "sidebar.fabric_preview": "Fabric Preview",
     "sidebar.search_placeholder": "Search fabrics...",
     "sidebar.col_name": "Name",
@@ -209,12 +231,78 @@ en = {
     "msg.rules_fallback": "Fallback to coarse rules",
     "msg.mask_generation_failed": "Mask generation failed",
     "msg.attribute_extraction_failed": "Attribute extraction failed",
+
+    # Missing keys - added for completeness
+    "main.candidates_title": "Recommended Fabrics",
+    "panel.right_title": "Analysis Results",
+    "panel.topk_title": "Top-K Fabrics",
+    "panel.confidence_title": "Confidence & Suggestions",
+    "panel.region_info_unavailable": "Region info unavailable",
+    "panel.low_confidence_tip": "Low confidence. Please sample and annotate to improve.",
+    "panel.coarse_suggestion_label": "Coarse suggestion",
+    "panel.actions_title": "Actions",
+    "panel.btn_save_training": "Save as training sample",
+    "panel.btn_vote_up": "Add to multi-point voting",
+    "panel.recent_clicks_label": "Recent Clicks",
+    "ui.error_slic_fallback": "SLIC segmentation failed",
+    "ui.error_click_capture": "Click capture failed",
+    "ui.error_image_failed": "Image loading failed",
+    "ui.error_save_failed": "Save failed",
+    "ui.label_as": "Label as",
+    "ui.submit_label": "Submit Label",
+    "ui.performance_log": "Performance Log",
 }
 
 
-def t(key: str, lang: str = None) -> str:
-    """Get localized string by key. Falls back to key if missing."""
+def t(key: str, lang: str = None, default: str = None) -> str:
+    """
+    Get localized string by key with robust fallback.
+    
+    Args:
+        key: Translation key (e.g., 'app.title')
+        lang: Language code ('zh' or 'en'). Defaults to session state.
+        default: Custom default value if key not found.
+    
+    Returns:
+        Translated string, or fallback if key missing.
+    
+    Fallback logic:
+        1. Try to get from locale dict
+        2. If missing and default provided, return default
+        3. If missing and no default, return humanized key name
+        4. Log warning to console for missing keys
+    """
+    import warnings
+    
     if lang is None:
         lang = st.session_state.get("lang", "zh")
+    
     locale_dict = zh if lang == "zh" else en
-    return locale_dict.get(key, key)
+    
+    # Try to get translation
+    if key in locale_dict:
+        return locale_dict[key]
+    
+    # Key not found - log warning
+    warnings.warn(f"[i18n] Missing translation key: '{key}' for lang '{lang}'", UserWarning, stacklevel=2)
+    
+    # Return custom default if provided
+    if default is not None:
+        return default
+    
+    # Generate humanized fallback from key
+    # e.g., "panel.right_title" -> "Right Title"
+    fallback_generic = {
+        "zh": "未命名",
+        "en": "Untitled"
+    }
+    
+    try:
+        # Try to humanize the key: split by dots, take last part, replace underscores, title case
+        parts = key.split('.')
+        last_part = parts[-1] if parts else key
+        humanized = last_part.replace('_', ' ').title()
+        return humanized
+    except Exception:
+        # Ultimate fallback
+        return fallback_generic.get(lang, "Untitled")

@@ -2,7 +2,7 @@
   {
     "key": "velvet",
     "display_name": {"zh": "天鹅绒", "en": "Velvet"},
-    "notes": {"zh": "绒毛致密，反光随方向变化", "en": "Dense pile with directional sheen"},
+    "notes": {"zh": "绒毛致密,反光随方向变化", "en": "Dense pile with directional sheen"},
     "suitable_structures": ["bodice","skirt","coat"],
     "signature_rules": [
       {"feat":"gabor_anisotropy", "op":">", "val":0.5, "score":1.2}
@@ -15,7 +15,7 @@
   {
     "key": "corduroy",
     "display_name": {"zh": "灯芯绒", "en": "Corduroy"},
-    "notes": {"zh": "纵向罗纹明显，绒面柔和", "en": "Distinct vertical wales with velvety pile"},
+    "notes": {"zh": "纵向罗纹明显,绒面柔和", "en": "Distinct vertical wales with velvety pile"},
     "suitable_structures": ["bodice","pants","skirt","coat"],
     "signature_rules": [
       {"feat":"fft_main_dir_strength", "op":">", "val":0.55, "score":2.0},
@@ -30,7 +30,7 @@
   {
     "key": "suede",
     "display_name": {"zh": "麂皮", "en": "Suede"},
-    "notes": {"zh": "短绒哑光，手感细腻", "en": "Short pile matte, soft hand"},
+    "notes": {"zh": "短绒哑光,手感细腻", "en": "Short pile matte, soft hand"},
     "suitable_structures": ["bodice","skirt","coat","pants"],
     "signature_rules": [
       {"feat":"specular_ratio", "op":"<", "val":0.35, "score":1.2}

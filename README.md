@@ -35,7 +35,7 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-## 👨‍💻 Developer Guide | 开发者指南
+## 👨💻 Developer Guide | 开发者指南
 - Formatting: run Black/Ruff before commit (configured in `pyproject.toml`, line width 100)
   - black . && ruff check .
   - Safety note: Always generate complete try/except blocks with at least one indented statement; do not leave `try:` empty.

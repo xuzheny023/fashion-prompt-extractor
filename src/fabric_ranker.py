@@ -3,11 +3,8 @@
 # -*- coding: utf-8 -*-
 """
 3D fabric scoring framework: Color + Sheen + Texture
-涓夌淮闈㈡枡鎵撳垎妗嗘灦锛氶鑹?+ 鍏夋辰搴?+ 绾圭悊
 - Read data/fabric_rules.json (use built-in defaults if not exists)
-- 璇诲彇 data/fabric_rules.json锛堣嫢涓嶅瓨鍦ㄤ娇鐢ㄥ唴缃粯璁わ級
 - Score based on color similarity, sheen characteristics, and texture features
-- 鍩轰簬棰滆壊鐩镐技搴︺€佸厜娉界壒寰佸拰绾圭悊鐗瑰緛鎵撳垎
 """
 
 from __future__ import annotations
@@ -70,7 +67,7 @@ def _map_color_to_group(color_name: str, color_groups: Dict[str, List[str]]) -> 
 
 
 def _color_score(attrs: Dict, rule: Dict) -> float:
-    """Calculate color similarity score / 璁＄畻棰滆壊鐩镐技搴﹀緱鍒?""
+    """Calculate color similarity score."""
     try:
         vis = attrs.get("visual", {})
         color_name = vis.get("dominant_color_name", "unknown")
@@ -100,10 +97,10 @@ def _color_score(attrs: Dict, rule: Dict) -> float:
 
 
 def _sheen_score(attrs: Dict, rule: Dict) -> float:
-    """Calculate sheen characteristics score / 璁＄畻鍏夋辰鐗瑰緛寰楀垎"""
+    """Calculate sheen characteristics score."""
     try:
         # For now, use coverage ratio as a proxy for sheen (higher coverage = more reflective)
-        # 鏆傛椂鐢ㄨ鐩栧害浣滀负鍏夋辰搴︾殑浠ｇ悊鎸囨爣锛堣鐩栧害瓒婇珮瓒婂弽鍏夛級
+        # 鏆傛椂鐢ㄨ鐩栧害浣滀负鍏夋辰搴》殑浠g悊鎸囨爣锛堣鐩栧害瓒婇珮瓒婂弽鍏夛級
         coverage = attrs.get("visual", {}).get("coverage_ratio", 0.5)
 
         # Check if coverage falls within expected sheen range
@@ -123,7 +120,7 @@ def _sheen_score(attrs: Dict, rule: Dict) -> float:
 
 
 def _texture_score(attrs: Dict, rule: Dict) -> float:
-    """Calculate texture complexity score / 璁＄畻绾圭悊澶嶆潅搴﹀緱鍒?""
+    """Calculate texture complexity score."""
     try:
         # Use texture complexity from rule if available
         texture_complexity = rule.get("texture_complexity", 0.5)
@@ -376,7 +373,7 @@ def rank_fabrics_by_structures(
 def save_rules_weights(new_weights: Dict[str, float]) -> None:
     """
     Write weights back to data/fabric_rules.json and clear cache (3D weights)
-    灏嗘潈閲嶅啓鍥?data/fabric_rules.json锛屽苟娓呯┖缂撳瓨銆傦紙涓夌淮鏉冮噸锛?    """
+    """
     rules_obj = _load_rules().copy()
     rules_obj["weights"] = {
         "color": float(new_weights.get("color", 0.5)),
@@ -394,11 +391,11 @@ def save_rules_weights(new_weights: Dict[str, float]) -> None:
 def localize_fabric(rule_or_name: Union[Dict, str], lang: str) -> Tuple[str, str]:
     """
     Get localized display name and notes for a fabric rule or name
-    鑾峰彇闈㈡枡瑙勫垯鎴栧悕绉扮殑鏈湴鍖栨樉绀哄悕绉板拰璇存槑
+    鑾峰彇闈(二)枡瑙勫垯鎴栧悕绉扮殑鏈湴鍖栨樉绀哄悕绉板拰璇存槑
 
     Args:
-        rule_or_name: Either a fabric rule dict or fabric name string / 闈㈡枡瑙勫垯瀛楀吀鎴栭潰鏂欏悕绉板瓧绗︿覆
-        lang: Language code ('en' or 'zh') / 璇█浠ｇ爜锛?en' 鎴?'zh'锛?
+        rule_or_name: Either a fabric rule dict or fabric name string / 闈(二)枡瑙勫垯瀛楀吀鎴栭潰鏂欏悕绉板瓧绗〈覆
+        lang: Language code ('en' or 'zh') / 璇█浠g爜锛?en' 鎴?'zh'锛?
     Returns:
         Tuple of (display_name, notes) / 杩斿洖锛堟樉绀哄悕绉帮紝璇存槑锛夊厓缁?    """
     try:
@@ -439,8 +436,8 @@ def _extract_localized_fields(rule: Dict, lang: str) -> Tuple[str, str]:
     Extract localized display_name and notes from a rule
     浠庤鍒欎腑鎻愬彇鏈湴鍖栫殑鏄剧ず鍚嶇О鍜岃鏄?
     Args:
-        rule: Fabric rule dictionary / 闈㈡枡瑙勫垯瀛楀吀
-        lang: Language code / 璇█浠ｇ爜
+        rule: Fabric rule dictionary / 闈(二)枡瑙勫垯瀛楀吀
+        lang: Language code / 璇█浠g爜
 
     Returns:
         Tuple of (display_name, notes) / 杩斿洖锛堟樉绀哄悕绉帮紝璇存槑锛夊厓缁?    """
@@ -482,12 +479,12 @@ def _get_localized_field(rule: Dict, field: str, lang: str) -> str:
     Get localized field value from rule
     浠庤鍒欎腑鑾峰彇鏈湴鍖栧瓧娈靛€?
     Args:
-        rule: Fabric rule dictionary / 闈㈡枡瑙勫垯瀛楀吀
+        rule: Fabric rule dictionary / 闈(二)枡瑙勫垯瀛楀吀
         field: Field name ('display_name' or 'notes') / 瀛楁鍚嶇О
-        lang: Language code / 璇█浠ｇ爜
+        lang: Language code / 璇█浠g爜
 
     Returns:
-        Localized field value or empty string / 鏈湴鍖栧瓧娈靛€兼垨绌哄瓧绗︿覆
+        Localized field value or empty string / 鏈湴鍖栧瓧娈靛€兼垨绌哄瓧绗〈覆
     """
     field_data = rule.get(field, {})
 
@@ -508,7 +505,7 @@ def recommend_fabrics_localized(attrs: Dict, lang: str = "en", top_k: int = 5,
     Enhanced recommend_fabrics with localization support
     澧炲己鐨勯潰鏂欐帹鑽愬嚱鏁帮紝鏀寔鏈湴鍖?
     Args:
-        attrs: Extracted attributes / 鎻愬彇鐨勫睘鎬?        lang: Language code for localization / 鏈湴鍖栬瑷€浠ｇ爜
+        attrs: Extracted attributes / 鎻愬彇鐨勫睘鎬?        lang: Language code for localization / 鏈湴鍖栬瑷€浠g爜
         top_k: Number of top results / 杩斿洖缁撴灉鏁伴噺
         weights_override: Custom weights / 鑷畾涔夋潈閲?        rules_source: "coarse" or "fine" / 瑙勫垯婧愶細"coarse" 鎴?"fine"
 

@@ -38,7 +38,8 @@ def _dominant_color_bgr(img_bgr: np.ndarray, mask: np.ndarray) -> Tuple[int, int
     """
     if img_bgr.size == 0:
         return (128, 128, 128)
-    # Only count foreground / 鍙粺璁″墠鏅?    hist = cv2.calcHist([img_bgr], [0, 1, 2], mask, [8, 8, 8],
+    # Only count foreground / 鍙粺璁′′墠鏅?
+    hist = cv2.calcHist([img_bgr], [0, 1, 2], mask, [8, 8, 8],
                         [0, 256, 0, 256, 0, 256])
     idx = np.unravel_index(np.argmax(hist), hist.shape)
     b = int((idx[0] + 0.5) * 32)
@@ -66,7 +67,8 @@ def _simple_color_name(rgb: Tuple[int, int, int]) -> str:
     if s < 30:
         return "gray"
 
-    # Hue range (OpenCV: 0-179) / hue 鍖洪棿锛圤penCV: 0-179锛?    if h < 10 or h >= 170:
+    # Hue range (OpenCV: 0-179) / hue 鍖洪棿锛圤penCV: 0-179锛?
+    if h < 10 or h >= 170:
         return "red"
     if 10 <= h < 20:
         return "orange"
@@ -128,35 +130,35 @@ def extract_attributes(image: Image.Image, mask: np.ndarray) -> Dict:
 ATTR_KEYS = {
     "visual": {
         "en": "Visual",
-        "zh": "瑙嗚"
+        "zh": "视觉"
     },
     "dominant_color_name": {
         "en": "Dominant Color",
-        "zh": "涓昏壊璋?
+        "zh": "主色调"
     },
     "dominant_color_hex": {
         "en": "Color Code",
-        "zh": "鑹插彿"
+        "zh": "颜色代码"
     },
     "coverage_ratio": {
         "en": "Coverage Ratio",
-        "zh": "瑕嗙洊鐜?
+        "zh": "覆盖率"
     }
 }
 
 # Color name mappings / 棰滆壊鍚嶇О鏄犲皠
 COLOR_NAMES = {
-    "black": {"en": "Black", "zh": "榛戣壊"},
-    "white": {"en": "White", "zh": "鐧借壊"},
-    "gray": {"en": "Gray", "zh": "鐏拌壊"},
-    "red": {"en": "Red", "zh": "绾㈣壊"},
-    "orange": {"en": "Orange", "zh": "姗欒壊"},
-    "yellow": {"en": "Yellow", "zh": "榛勮壊"},
-    "green": {"en": "Green", "zh": "缁胯壊"},
-    "cyan": {"en": "Cyan", "zh": "闈掕壊"},
-    "blue": {"en": "Blue", "zh": "钃濊壊"},
-    "purple": {"en": "Purple", "zh": "绱壊"},
-    "unknown": {"en": "Unknown", "zh": "鏈煡"}
+    "black": {"en": "Black", "zh": "黑色"},
+    "white": {"en": "White", "zh": "白色"},
+    "gray": {"en": "Gray", "zh": "灰色"},
+    "red": {"en": "Red", "zh": "红色"},
+    "orange": {"en": "Orange", "zh": "橙色"},
+    "yellow": {"en": "Yellow", "zh": "黄色"},
+    "green": {"en": "Green", "zh": "绿色"},
+    "cyan": {"en": "Cyan", "zh": "青色"},
+    "blue": {"en": "Blue", "zh": "蓝色"},
+    "purple": {"en": "Purple", "zh": "紫色"},
+    "unknown": {"en": "Unknown", "zh": "未知"}
 }
 
 
@@ -165,7 +167,7 @@ def localize_attrs(attrs: Dict, lang: str = "en") -> Dict[str, Any]:
     Localize attribute dictionary for display purposes
     鏈湴鍖栧睘鎬у瓧鍏哥敤浜庢樉绀?
     Args:
-        attrs: Original attributes dictionary / 鍘熷灞炴€у瓧鍏?        lang: Language code ('en' or 'zh') / 璇█浠ｇ爜锛?en' 鎴?'zh'锛?
+        attrs: Original attributes dictionary / 鍘熷灞炴€у瓧鍏?        lang: Language code ('en' or 'zh') / 璇█浠g爜锛?en' 鎴?'zh'锛?
     Returns:
         Localized dictionary with translated keys and color names / 杩斿洖鏈湴鍖栧瓧鍏革紝鍖呭惈缈昏瘧鐨勯敭鍚嶅拰棰滆壊鍚?    """
     localized = {}
@@ -195,7 +197,7 @@ def get_color_name_localized(color_name: str, lang: str = "en") -> str:
     Get localized color name / 鑾峰彇鏈湴鍖栭鑹插悕绉?
     Args:
         color_name: English color name / 鑻辨枃棰滆壊鍚嶇О
-        lang: Language code / 璇█浠ｇ爜
+        lang: Language code / 璇█浠g爜
 
     Returns:
         Localized color name / 鏈湴鍖栭鑹插悕绉?    """

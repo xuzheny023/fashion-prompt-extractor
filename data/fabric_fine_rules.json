@@ -31,7 +31,7 @@
     },
     "notes": {
       "en": "High sheen, smooth drape; luxurious silk fabric with excellent draping qualities",
-      "zh": "高光泽度，垂坠感佳；奢华真丝面料，具有优异的垂坠特性"
+      "zh": "高光泽度,垂坠感佳;奢华真丝面料,具有优异的垂坠特性"
     },
     "suitable_structures": [
       "collar",
@@ -67,7 +67,7 @@
     ],
     "notes": {
       "en": "Matte to semi-sheen, fine pebbly texture; elegant draping silk",
-      "zh": "哑光至半光泽，细密颗粒纹理；优雅垂坠真丝"
+      "zh": "哑光至半光泽,细密颗粒纹理;优雅垂坠真丝"
     },
     "display_name": {
       "en": "Silk Crepe",
@@ -107,7 +107,7 @@
     ],
     "notes": {
       "en": "Sheer, grainy crepe with low sheen; perfect for flowing garments",
-      "zh": "透明颗粒绉，低光泽；适合流动感服装"
+      "zh": "透明颗粒绉,低光泽;适合流动感服装"
     },
     "display_name": {
       "en": "Georgette",
@@ -146,7 +146,7 @@
     ],
     "notes": {
       "en": "High sheen polyester fabric, slightly harsher than silk but affordable",
-      "zh": "高光泽涤纶面料，比真丝稍硬但经济实惠"
+      "zh": "高光泽涤纶面料,比真丝稍硬但经济实惠"
     },
     "display_name": {
       "en": "Polyester Satin",
@@ -186,7 +186,7 @@
     ],
     "notes": {
       "en": "Crisp, sheer fabric with stiff drape; perfect for structured garments",
-      "zh": "挺括透明面料，硬挺垂坠；适合结构化服装"
+      "zh": "挺括透明面料,硬挺垂坠;适合结构化服装"
     },
     "display_name": {
       "en": "Organza",
@@ -225,7 +225,7 @@
     ],
     "notes": {
       "en": "Lightweight, sheer fabric with soft drape; ideal for elegant evening wear",
-      "zh": "轻薄透明面料，柔软垂坠；适合优雅晚装"
+      "zh": "轻薄透明面料,柔软垂坠;适合优雅晚装"
     },
     "display_name": {
       "en": "Chiffon",
@@ -264,7 +264,7 @@
     ],
     "notes": {
       "en": "Fine netting fabric, very sheer; perfect for bridal and formal wear",
-      "zh": "精细网状面料，非常透明；适合婚纱和正装"
+      "zh": "精细网状面料,非常透明;适合婚纱和正装"
     },
     "display_name": {
       "en": "Tulle",
@@ -303,7 +303,7 @@
     ],
     "notes": {
       "en": "Textured wool fabric with looped yarns; classic for tailored garments",
-      "zh": "纹理羊毛面料，圈圈纱线；经典定制服装"
+      "zh": "纹理羊毛面料,圈圈纱线;经典定制服装"
     },
     "display_name": {
       "en": "Tweed Bouclé",
@@ -343,7 +343,7 @@
     ],
     "notes": {
       "en": "Durable cotton twill weave; casual and versatile for everyday wear",
-      "zh": "耐用棉斜纹织物；休闲多功能日常服装"
+      "zh": "耐用棉斜纹织物;休闲多功能日常服装"
     },
     "display_name": {
       "en": "Denim Twill",
@@ -383,11 +383,11 @@
     ],
     "notes": {
       "en": "Ribbed cotton fabric with 14 wales per inch; warm and comfortable",
-      "zh": "肋纹棉面料，每英寸14条；保暖舒适"
+      "zh": "肋纹棉面料,每英寸14条;保暖舒适"
     },
     "display_name": {
       "en": "Corduroy (14 Wale)",
-      "zh": "灯芯绒（14条）"
+      "zh": "灯芯绒(14条)"
     },
     "suitable_structures": [
       "pants",
@@ -423,7 +423,7 @@
     ],
     "notes": {
       "en": "Delicate lace with floral patterns; perfect for feminine and elegant styles",
-      "zh": "精致蕾丝花卉图案；适合女性化和优雅风格"
+      "zh": "精致蕾丝花卉图案;适合女性化和优雅风格"
     },
     "display_name": {
       "en": "Floral Lace",
@@ -462,7 +462,7 @@
     ],
     "notes": {
       "en": "Luxurious pile fabric with rich texture; perfect for formal and evening wear",
-      "zh": "奢华绒毛面料，丰富质感；适合正式和晚装"
+      "zh": "奢华绒毛面料,丰富质感;适合正式和晚装"
     },
     "display_name": {
       "en": "Velvet",
@@ -502,7 +502,7 @@
     ],
     "notes": {
       "en": "Smooth finish; specular highlights; premium leather with high sheen",
-      "zh": "光滑表面；镜面高光；高光泽度优质皮革"
+      "zh": "光滑表面;镜面高光;高光泽度优质皮革"
     },
     "display_name": {
       "en": "Smooth Leather",
@@ -542,7 +542,7 @@
     ],
     "notes": {
       "en": "Matte nap; darker stroke direction; soft textured leather",
-      "zh": "哑光绒毛；深色纹理方向；柔软质感皮革"
+      "zh": "哑光绒毛;深色纹理方向;柔软质感皮革"
     },
     "display_name": {
       "en": "Suede",
@@ -582,7 +582,7 @@
     ],
     "notes": {
       "en": "Natural linen fabric with crisp texture; perfect for summer and casual wear",
-      "zh": "天然亚麻面料，挺括质感；适合夏季和休闲装"
+      "zh": "天然亚麻面料,挺括质感;适合夏季和休闲装"
     },
     "display_name": {
       "en": "Plain Linen",
@@ -622,7 +622,7 @@
     ],
     "notes": {
       "en": "High-quality wool fabric for tailored suits; professional and elegant",
-      "zh": "优质羊毛面料，适合定制西装；专业优雅"
+      "zh": "优质羊毛面料,适合定制西装;专业优雅"
     },
     "display_name": {
       "en": "Wool Suiting",
