@@ -1,6 +1,31 @@
 # 👗 AI Fashion Analyzer
 Extract structural fashion keywords from fashion images and generate intelligent prompt suggestions for design use.
 
+## 🚀 CLIP 检索与线性头 | CLIP Retrieval & Linear Head
+
+基于 CLIP 视觉编码器的面料检索系统，通过线性分类头实现精准匹配。
+
+### 运行命令 | Commands
+
+```bash
+# 1. 构建面料参考库 (Build fabric reference bank)
+python tools/build_fabric_bank.py
+
+# 2. 训练线性分类头 (Train linear classification head)
+python tools/clip_train.py
+
+# 3. 快速评估 (Quick evaluation)
+python tools/eval_quick.py
+```
+
+### 工作流程 | Workflow
+
+1. **参考库构建**: 从 `data/fabrics/` 提取 CLIP 特征，构建面料向量库
+2. **线性头训练**: 使用 `data/patches/labeled/` 标注数据训练分类器
+3. **检索推理**: 结合 CLIP 相似度 + 线性头分数，输出 Top-K 推荐
+
+---
+
 ## 🌟 Project Overview | 项目概述
 This tool analyzes fashion or garment images (AI-generated or real) to automatically identify the fabric type and surface characteristics — including color, gloss, and texture patterns.
 It then compares the detected features with a fabric database and recommends the most visually similar fabrics for real-world material selection or production guidance.

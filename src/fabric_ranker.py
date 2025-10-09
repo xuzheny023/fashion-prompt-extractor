@@ -528,6 +528,84 @@ def recommend_fabrics_localized(attrs: Dict, lang: str = "en", top_k: int = 5,
     return localized_results
 
 
+def fuse_with_clip(patch_img, base_results: List[Tuple], lang="zh", alpha=0.7, topk=5) -> List[Tuple[str, float, str, str]]:
+    """
+    Fuse rule-based recommendations with CLIP retrieval scores.
+    融合基于规则的推荐与 CLIP 检索分数
+    
+    Args:
+        patch_img: PIL.Image of the fabric patch / 面料区域的 PIL 图像
+        base_results: Original results from recommend_fabrics_localized / 原始推荐结果
+            Format: [(name, score, display_name, notes), ...]
+        lang: Language code / 语言代码
+        alpha: Weight for base score (1-alpha for CLIP) / 基础分数权重（1-alpha 为 CLIP 权重）
+        topk: Number of results to return / 返回结果数量
+    
+    Returns:
+        Fused results: [(name, score, display_name, notes), ...] / 融合后的结果
+    """
+    try:
+        from PIL import Image
+        from src.clip_infer import rank_by_retrieval
+        
+        # 1) Extract base scores (0-1 range)
+        base = {}
+        metadata = {}  # Store display_name and notes
+        for item in base_results:
+            if len(item) >= 4:
+                name, score, display_name, notes = item
+                base[name] = float(score)
+                metadata[name] = (display_name, notes)
+            elif len(item) == 3:
+                name, score, notes = item
+                base[name] = float(score)
+                metadata[name] = (name, notes)
+            elif len(item) == 2:
+                name, score = item
+                base[name] = float(score)
+                metadata[name] = (name, "")
+        
+        # 2) Get CLIP retrieval scores (cosine similarity -1~1, map to [0,1])
+        clip_ranks = rank_by_retrieval(patch_img, topk=topk * 2)  # Get more candidates
+        clip = {}
+        for r in clip_ranks:
+            fid = r["id"]
+            # Cosine similarity typically in [-1, 1], but CLIP usually [0, 1]
+            # We normalize to [0, 1] range conservatively
+            score_raw = float(r["score"])
+            score_normalized = max(0.0, min(1.0, (score_raw + 1.0) / 2.0))
+            clip[fid] = score_normalized
+        
+        # 3) Fuse scores
+        all_ids = set(base) | set(clip)
+        fused = []
+        
+        for fid in all_ids:
+            b = base.get(fid, 0.0)
+            c = clip.get(fid, 0.0)
+            s = alpha * b + (1.0 - alpha) * c
+            
+            # Get metadata (display_name, notes)
+            if fid in metadata:
+                display_name, notes = metadata[fid]
+            else:
+                # New fabric from CLIP not in base results
+                display_name, notes = localize_fabric(fid, lang)
+            
+            fused.append((fid, round(float(s), 4), display_name, notes))
+        
+        # 4) Sort by fused score descending
+        fused.sort(key=lambda x: x[1], reverse=True)
+        
+        return fused[:topk]
+        
+    except Exception as e:
+        # Fallback to base results if CLIP fails
+        import logging
+        logging.warning(f"[CLIP fusion] Failed to fuse with CLIP: {e}. Using base results.")
+        return base_results[:topk]
+
+
 def score_with_features(attrs: Dict, features_dict: Dict, structure: str | None = None) -> Dict:
     """
     Placeholder scoring hook using extracted low-level features.
