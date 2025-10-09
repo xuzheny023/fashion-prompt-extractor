@@ -14,7 +14,10 @@ python tools/build_fabric_bank.py
 # 2. 训练线性分类头 (Train linear classification head)
 python tools/clip_train.py
 
-# 3. 快速评估 (Quick evaluation)
+# 3. 生成评估集 (Generate evaluation set from labeled patches)
+python tools/make_eval_set.py --split 0.2
+
+# 4. 快速评估 (Quick evaluation)
 python tools/eval_quick.py
 ```
 
@@ -22,7 +25,8 @@ python tools/eval_quick.py
 
 1. **参考库构建**: 从 `data/fabrics/` 提取 CLIP 特征，构建面料向量库
 2. **线性头训练**: 使用 `data/patches/labeled/` 标注数据训练分类器
-3. **检索推理**: 结合 CLIP 相似度 + 线性头分数，输出 Top-K 推荐
+3. **评估集生成**: 从标注数据自动生成测试集 JSONL
+4. **检索推理**: 结合 CLIP 相似度 + 线性头分数，输出 Top-K 推荐
 
 ---
 
