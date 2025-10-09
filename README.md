@@ -2,16 +2,32 @@
 Extract structural fashion keywords from fashion images and generate intelligent prompt suggestions for design use.
 
 ## 🌟 Project Overview | 项目概述
-This tool analyzes fashion images (AI-generated or real) by removing background, detecting clothing structures, 
-and mapping them to descriptive keywords. It then generates prompts suitable for Stable Diffusion or design documentation.
+This tool analyzes fashion or garment images (AI-generated or real) to automatically identify the fabric type and surface characteristics — including color, gloss, and texture patterns.
+It then compares the detected features with a fabric database and recommends the most visually similar fabrics for real-world material selection or production guidance.
 
+该工具可通过 AI 自动识别服装图片中的 颜色、光泽、纹理 等面料特征，并与面料库进行比对，
+列出与图示视觉效果最相近的可替代面料，帮助用户快速找到合适的材质或开发参考。
 ## ✨ Features | 功能特色
-- Upload any fashion image (PNG/JPG)
-- Automatic background removal
-- Detect clothing structures (neckline, sleeves, waist, skirt, etc.)
-- Fabric recommendation (list possible fabrics for similar visual effect)
-- Auto-generate descriptive English prompts
-- Built with Streamlit
+Upload fashion or fabric images (PNG/JPG)
+上传服装或面料图片（PNG/JPG）
+
+Automatic background removal
+自动去除背景，提取主体区域
+
+AI-based fabric attribute detection
+基于 AI 的面料属性识别（颜色、光泽、纹理）
+
+Fabric similarity ranking & recommendation
+根据视觉特征生成面料相似度排序与推荐
+
+Customizable attribute weights
+可自定义颜色 / 光泽 / 纹理权重，实现个性化推荐结果
+
+Localized fine-tuning (region-based analysis)
+支持局部区域细化分析与混合推荐模式
+
+Built with Streamlit | 使用 Streamlit 构建
+可在本地快速运行或在线部署
 
 ## 📂 Project Structure | 项目结构
 ```text
