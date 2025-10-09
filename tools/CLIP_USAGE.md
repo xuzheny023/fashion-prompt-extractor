@@ -85,27 +85,46 @@ venv\Scripts\python.exe tools\eval_quick.py
 ```
 
 **功能：**
-1. 评估 CLIP 检索的 Top-1 和 Top-K 准确率
-2. 显示混淆矩阵
-3. 评估线性分类头性能（如果存在）
+- 使用 JSONL 测试集评估 CLIP 检索性能
+- 计算 Top@1 和 Top@3 准确率
+- 显示错误报告
+
+**准备评估集：**
+
+创建 `data/eval_set.jsonl` 文件，每行一个 JSON 对象：
+
+```jsonl
+{"image":"path/to/image1.jpg","coords":[x,y],"label":"cotton"}
+{"image":"path/to/image2.jpg","coords":[x,y],"label":"silk"}
+{"image":"path/to/image3.jpg","coords":[x,y],"label":"wool"}
+```
+
+**字段说明：**
+- `image`: 图像文件路径（相对或绝对）
+- `coords`: 点击坐标 [x, y]（当前版本未使用，保留用于未来 patch 提取）
+- `label`: 真实标签（面料 ID）
 
 **输出示例：**
 ```
 ============================================================
-Overall Metrics
+CLIP Retrieval Evaluation (JSONL)
 ============================================================
-Total samples: 35
-Top-1 Accuracy: 85.71% (30/35)
-Top-5 Accuracy: 97.14% (34/35)
+
+Eval set: D:\...\data\eval_set.jsonl
+Top-K: 5
+
+Processing 50 samples...
 
 ============================================================
-Per-Class Metrics
+Results
 ============================================================
-Class                Samples    Top-1 Acc    Top-5 Acc
-------------------------------------------------------------
-cotton               15         93.33%       100.00%
-silk                 8          75.00%       87.50%
-wool                 12         83.33%       100.00%
+Total samples: 50
+Successfully processed: 48
+Errors: 2
+
+Top@1 Accuracy: 85.42% (41/48)
+Top@3 Accuracy: 95.83% (46/48)
+============================================================
 ```
 
 ---
