@@ -13,7 +13,7 @@ from src.attr_extract import extract_attributes, localize_attrs
 from src.fabric_ranker import recommend_fabrics, save_rules_weights, recommend_fabrics_localized
 from src.utils import validate_fabric_rules
 from src.structure_detect import detect_structures, to_bool_set
-from ui.i18n import t
+from ui.i18n import t, _self_check
 from pathlib import Path
 import os
 import shutil
@@ -250,6 +250,10 @@ def _get_localized_notes(fabric_item: dict, lang: str) -> str:
 
     return ""
 
+# ================= i18n Self-Check =================
+# Verify i18n system is working correctly (can be disabled in production)
+_self_check()
+
 # Validate fine fabric rules at startup
 ok, errs = validate_fabric_rules(str(Path(__file__).resolve().parents[0] / "data" / "fabric_fine_rules.json"))
 if not ok:
@@ -259,7 +263,7 @@ st.title(t("app.title", get_current_lang()))
 st.caption(t("app.subtitle", get_current_lang()))
 
 # ================= Weights controls =================
-st.sidebar.header("閳挎瑱绗?" + t("sidebar.weight_header", get_current_lang()))
+st.sidebar.header(t("sidebar.weight_header", get_current_lang()))
 w_color = st.sidebar.slider(t("sidebar.color_weight", get_current_lang()), 0.0, 1.0, 0.5, 0.01)
 w_sheen = st.sidebar.slider(t("sidebar.sheen_weight", get_current_lang()), 0.0, 1.0, 0.3, 0.01)
 w_texture = st.sidebar.slider(t("sidebar.texture_weight", get_current_lang()), 0.0, 1.0, 0.2, 0.01)
@@ -806,8 +810,8 @@ else:
         st.markdown('</div>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # 闂傚倸鐗勯崹娲几閿熺姴绠抽柕濞垮妼缁€鍐煥濞戞澧涢柡渚囧櫍閺?coarse/fine 濠电姍鍕Ё缂佽鲸宀搁弫宥団偓瑙勬綊ne 閻庢鍠栭崐鎼佹偉閸洖鐐婇柣鎰€€閸嬫捇鍩€?coarse
-    st.markdown("### 濡絽鍞?" + t("main.candidates_title", get_current_lang()))
+    # Main candidates section
+    st.markdown("### " + t("main.candidates_title", get_current_lang()))
     rules_source = "fine" if use_fine else "coarse"
     try:
         # If using packs, override fine rules via merged list in memory

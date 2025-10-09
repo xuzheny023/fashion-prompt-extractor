@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 # ui/i18n.py
 import streamlit as st
+import logging
 
 # New canonical keys (from clean table)
 zh = {
@@ -254,55 +255,142 @@ en = {
 }
 
 
+def normalize_lang(lang: str = None) -> str:
+    """
+    Normalize language code to standard 'zh' or 'en'.
+    
+    Args:
+        lang: Language code (can be None, 'zh', 'zh-cn', 'en', 'en-us', etc.)
+    
+    Returns:
+        Normalized language code ('zh' or 'en')
+    
+    Examples:
+        normalize_lang('zh-CN') -> 'zh'
+        normalize_lang('en_US') -> 'en'
+        normalize_lang(None) -> 'zh' (default)
+    """
+    if not lang:
+        return "zh"
+    
+    lang = str(lang).lower().strip()
+    
+    # Chinese variants
+    if lang in ("zh", "zh-cn", "zh_cn", "zh-hans", "chs", "cn", "chinese"):
+        return "zh"
+    
+    # English variants
+    if lang in ("en", "en-us", "en_us", "en-gb", "english"):
+        return "en"
+    
+    # Default to Chinese for unknown
+    return "zh"
+
+
 def t(key: str, lang: str = None, default: str = None) -> str:
     """
     Get localized string by key with robust fallback.
     
     Args:
         key: Translation key (e.g., 'app.title')
-        lang: Language code ('zh' or 'en'). Defaults to session state.
+        lang: Language code (can be 'zh', 'zh-cn', 'en', 'en-us', etc.). Defaults to session state.
         default: Custom default value if key not found.
     
     Returns:
         Translated string, or fallback if key missing.
     
     Fallback logic:
-        1. Try to get from locale dict
-        2. If missing and default provided, return default
-        3. If missing and no default, return humanized key name
-        4. Log warning to console for missing keys
+        1. Normalize language code to 'zh' or 'en'
+        2. Try to get from locale dict
+        3. If missing and default provided, return default
+        4. If missing and no default, return humanized key name
+        5. Log warning for missing keys
+        6. Handle exceptions gracefully
+    
+    Examples:
+        t('app.title', 'zh') -> 'AI面料识别推荐助手'
+        t('missing.key', 'zh', default='默认值') -> '默认值'
+        t('missing.key', 'en') -> 'Missing Key' (humanized)
     """
-    import warnings
-    
-    if lang is None:
-        lang = st.session_state.get("lang", "zh")
-    
-    locale_dict = zh if lang == "zh" else en
-    
-    # Try to get translation
-    if key in locale_dict:
-        return locale_dict[key]
-    
-    # Key not found - log warning
-    warnings.warn(f"[i18n] Missing translation key: '{key}' for lang '{lang}'", UserWarning, stacklevel=2)
-    
-    # Return custom default if provided
-    if default is not None:
-        return default
-    
-    # Generate humanized fallback from key
-    # e.g., "panel.right_title" -> "Right Title"
+    # Generic fallback values (last resort)
     fallback_generic = {
         "zh": "未命名",
         "en": "Untitled"
     }
     
     try:
-        # Try to humanize the key: split by dots, take last part, replace underscores, title case
-        parts = key.split('.')
-        last_part = parts[-1] if parts else key
-        humanized = last_part.replace('_', ' ').title()
-        return humanized
-    except Exception:
-        # Ultimate fallback
+        # Step 1: Normalize language code
+        if lang is None:
+            lang = st.session_state.get("lang", "zh")
+        lang = normalize_lang(lang)
+        
+        # Step 2: Select appropriate dictionary
+        locale_dict = zh if lang == "zh" else en
+        
+        # Step 3: Try to get translation
+        if key in locale_dict:
+            val = locale_dict[key]
+            # Ensure we're not returning garbled or empty values
+            if val and isinstance(val, str) and val.strip():
+                return val
+            else:
+                logging.warning(f"[i18n] Empty or invalid value for key '{key}' in lang '{lang}'")
+        
+        # Step 4: Key not found - log warning
+        logging.warning(f"[i18n] Missing translation key: '{key}' for lang '{lang}'")
+        
+        # Step 5: Return custom default if provided
+        if default is not None:
+            return default
+        
+        # Step 6: Generate humanized fallback from key
+        # e.g., "panel.right_title" -> "Right Title"
+        try:
+            parts = key.split('.')
+            last_part = parts[-1] if parts else key
+            humanized = last_part.replace('_', ' ').title()
+            # Only return humanized if it's different from the key
+            if humanized and humanized != key:
+                return humanized
+        except Exception:
+            pass
+        
+        # Step 7: Ultimate fallback
         return fallback_generic.get(lang, "Untitled")
+        
+    except Exception as e:
+        # Catastrophic error - log and return safe fallback
+        logging.error(f"[i18n] Error getting translation for key '{key}': {e}")
+        return default if default is not None else fallback_generic.get(normalize_lang(lang), "Untitled")
+
+
+def _self_check():
+    """
+    Self-check function to verify i18n system is working correctly.
+    Call this during app initialization to ensure no garbled text.
+    """
+    # Critical keys that had issues before
+    keys = [
+        "sidebar.weight_header",       # Was: "閳挎瑱绗?" + value
+        "sidebar.weights.title",       # New canonical key
+        "main.candidates_title",       # Was: "濡絽鍞?" + value
+        "app.title",                   # Main app title
+    ]
+    
+    results = {}
+    for k in keys:
+        val = t(k, "zh")
+        results[k] = repr(val)
+    
+    print("[i18n self-check]", results)
+    
+    # Verify no garbled characters
+    garbled_patterns = ["閳挎瑱绗", "濡絽鍞", "棣冩啿", "闂傚倸鐗"]
+    for k, v in results.items():
+        for pattern in garbled_patterns:
+            if pattern in v:
+                logging.error(f"[i18n self-check] FAILED! Garbled text detected in '{k}': {v}")
+                return False
+    
+    logging.info("[i18n self-check] PASSED! All keys return clean Chinese text.")
+    return True
