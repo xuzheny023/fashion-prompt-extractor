@@ -2,5 +2,7 @@
 <project version="4">
   <component name="VcsDirectoryMappings">
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/cache/open_clip/CLIP-ViT-H-14-laion2B-s32B-b79K" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/cache/open_clip/ViT-H-14/laion2b_s32b_b79k/CLIP-ViT-H-14-laion2B-s32B-b79K" vcs="Git" />
   </component>
 </project>

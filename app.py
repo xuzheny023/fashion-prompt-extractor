@@ -287,6 +287,9 @@ if st.sidebar.button(t("sidebar.save_default", get_current_lang())):
 # Fine-grained fabric library switch
 use_fine = st.sidebar.checkbox(t("sidebar.use_fine", get_current_lang()), value=True)
 
+# CLIP-based recommendation switch
+use_clip = st.sidebar.checkbox("🔬 使用 CLIP 向量检索 (实验性)", value=False, help="使用双通道 CLIP 模型进行面料识别，更准确但需要向量库")
+
 # Optional: use rules packs merging
 USE_PACKS = st.sidebar.checkbox("Use rule packs (merged)", value=False)
 merged_rules_cache: list[dict] | None = None
@@ -604,11 +607,22 @@ else:
                     for i, (name, score, explain) in enumerate(items, 1):
                         disp, notes = localize_fabric(name, get_current_lang())
                         score_label = t("candidates.score", get_current_lang())
-                        # Unified single-row: index, name and score (score weak-emphasis via CSS)
+                        
+                        # Convert score to confidence percentage (0-100)
+                        confidence_pct = int(score * 100)
+                        
+                        # Unified single-row: index, name and score with confidence bar
                         st.markdown(
                             f"<div class='row'><span class='idx'>{i}.</span><span class='name'>{disp}</span><span class='score'>{score_label} {score:.2f}</span></div>",
                             unsafe_allow_html=True,
                         )
+                        
+                        # Add confidence bar
+                        st.progress(confidence_pct / 100.0)
+                        
+                        # Show low confidence warning
+                        if score < 0.30:
+                            st.caption("⚠️ 建议人工确认/补图")
                         # Optional short explain summary
                         if isinstance(explain, dict):
                             comps = explain.get("components", {})
@@ -812,48 +826,126 @@ else:
 
     # Main candidates section
     st.markdown("### " + t("main.candidates_title", get_current_lang()))
-    rules_source = "fine" if use_fine else "coarse"
-    try:
-        # If using packs, override fine rules via merged list in memory
-        if USE_PACKS and merged_rules_cache is not None and rules_source == "fine":
-            # Perform scoring against merged fine list by temporarily monkeypatching loader
-            from src import fabric_ranker as _fr
-            orig_loader = getattr(_fr, "_load_rules_fine")
-            try:
-                from functools import lru_cache
-                def _load_rules_fine_override():
-                    items = []
-                    for it in list(merged_rules_cache or []):
-                        obj = dict(it)
-                        # ensure compatibility fields expected by downstream logic
-                        if not obj.get("name"):
-                            obj["name"] = str(obj.get("key", "Unknown"))
-                        if "notes" not in obj:
-                            obj["notes"] = ""
-                        if "sheen_range" not in obj:
-                            obj["sheen_range"] = [0.0, 1.0]
-                        if "edge_range" not in obj:
-                            obj["edge_range"] = [0.1, 0.5]
-                        if "base" not in obj:
-                            obj["base"] = 0.5
-                        items.append(obj)
-                    return items
-                _fr._load_rules_fine = lru_cache(maxsize=1)(_load_rules_fine_override)  # type: ignore
-                candidates = recommend_fabrics_localized(attrs, lang=get_current_lang(), top_k=5, weights_override=weights, rules_source=rules_source)
-            finally:
-                _fr._load_rules_fine = orig_loader  # type: ignore
-        else:
-            candidates = recommend_fabrics_localized(attrs, lang=get_current_lang(), top_k=5, weights_override=weights, rules_source=rules_source)
-    except Exception as e:
-        if rules_source == "fine":
-            st.sidebar.warning(t("msg.rules_fallback", get_current_lang()))
-            rules_source = "coarse"
-            candidates = recommend_fabrics_localized(attrs, lang=get_current_lang(), top_k=5, weights_override=weights, rules_source=rules_source)
-        else:
-            st.error(t("msg.fabric_recommendation_failed", get_current_lang()))
+    
+    # 选择推荐方式：CLIP 向量检索 或 传统规则基
+    if use_clip:
+        # CLIP-based recommendation with progress bar
+        try:
+            import time
+            import numpy as np
+            import hashlib
+            from src.fabric_clip_ranker import retrieve_topk, load_centroids, load_bank
+            from src.fabric_labels import get_label
+            
+            # 优化1: 缓存编码器（避免重复加载模型）
+            @st.cache_resource(show_spinner=False)
+            def get_encoder_cached():
+                from src.dual_clip import get_encoder
+                return get_encoder()
+            
+            # 优化2: 缓存编码结果（避免重复编码相同图片）
+            @st.cache_data(show_spinner=False)
+            def encode_image_cached(img_bytes: bytes):
+                from PIL import Image as PILImage
+                import io
+                from src.dual_clip import image_to_emb
+                img = PILImage.open(io.BytesIO(img_bytes))
+                return image_to_emb(img)
+            
+            st.info("🧠 使用 CLIP 双通道向量检索…")
+            pb = st.progress(0, text="初始化模型与数据…")
+            
+            # 0) 预加载（缓存里很快）
+            _ = get_encoder_cached()  # 预加载编码器
+            _ = load_centroids()
+            _ = load_bank()
+            pb.progress(0.05, text="已加载类中心向量…")
+            
+            # 1) 编码查询（使用缓存）
+            t0 = time.perf_counter()
+            # 将 PIL Image 转为 bytes 用于缓存 key
+            import io
+            img_buffer = io.BytesIO()
+            image.save(img_buffer, format='PNG')
+            img_bytes = img_buffer.getvalue()
+            
+            q = encode_image_cached(img_bytes)
+            # 归一化
+            q = q.astype("float32")
+            q = q / (np.linalg.norm(q) + 1e-12)
+            pb.progress(0.25, text="已生成查询向量 (1536维)…")
+            
+            # 2) 粗排 + 精排（优化3: 使用较小的 TOPC）
+            topc = 10  # 从 12 降到 10，更快且效果接近
+            pb.progress(0.40, text=f"进行类中心粗排（TopC={topc}）…")
+            topk_list, coarse_max = retrieve_topk(q, topk=5, topc=topc)
+            pb.progress(0.85, text="类内精排完成…")
+            
+            # 3) 收尾
+            used_ms = (time.perf_counter() - t0) * 1000
+            pb.progress(1.0, text=f"✓ 完成：{used_ms:.0f} ms")
+            
+            # 转换为统一格式 (name, score, display_name, notes)
+            candidates = []
+            for fabric_id, score in topk_list:
+                display_name = get_label(fabric_id) if get_current_lang() == "zh" else fabric_id
+                candidates.append((fabric_id, score, display_name, ""))
+            
+            # 显示性能指标
+            st.caption(f"📊 粗排最高分: {coarse_max:.3f} · 检索用时: {used_ms:.0f} ms")
+            
+        except FileNotFoundError as e:
+            st.error(f"❌ 向量库未找到：{e}")
+            st.info("💡 请先运行：`python tools/build_fabric_bank.py`")
             st.stop()
+        except Exception as e:
+            st.error(f"❌ CLIP 推荐失败：{e}")
+            st.exception(e)
+            st.stop()
+    else:
+        # Traditional rule-based recommendation
+        rules_source = "fine" if use_fine else "coarse"
+        try:
+            # If using packs, override fine rules via merged list in memory
+            if USE_PACKS and merged_rules_cache is not None and rules_source == "fine":
+                # Perform scoring against merged fine list by temporarily monkeypatching loader
+                from src import fabric_ranker as _fr
+                orig_loader = getattr(_fr, "_load_rules_fine")
+                try:
+                    from functools import lru_cache
+                    def _load_rules_fine_override():
+                        items = []
+                        for it in list(merged_rules_cache or []):
+                            obj = dict(it)
+                            # ensure compatibility fields expected by downstream logic
+                            if not obj.get("name"):
+                                obj["name"] = str(obj.get("key", "Unknown"))
+                            if "notes" not in obj:
+                                obj["notes"] = ""
+                            if "sheen_range" not in obj:
+                                obj["sheen_range"] = [0.0, 1.0]
+                            if "edge_range" not in obj:
+                                obj["edge_range"] = [0.1, 0.5]
+                            if "base" not in obj:
+                                obj["base"] = 0.5
+                            items.append(obj)
+                        return items
+                    _fr._load_rules_fine = lru_cache(maxsize=1)(_load_rules_fine_override)  # type: ignore
+                    candidates = recommend_fabrics_localized(attrs, lang=get_current_lang(), top_k=5, weights_override=weights, rules_source=rules_source)
+                finally:
+                    _fr._load_rules_fine = orig_loader  # type: ignore
+            else:
+                candidates = recommend_fabrics_localized(attrs, lang=get_current_lang(), top_k=5, weights_override=weights, rules_source=rules_source)
+        except Exception as e:
+            if rules_source == "fine":
+                st.sidebar.warning(t("msg.rules_fallback", get_current_lang()))
+                rules_source = "coarse"
+                candidates = recommend_fabrics_localized(attrs, lang=get_current_lang(), top_k=5, weights_override=weights, rules_source=rules_source)
+            else:
+                st.error(t("msg.fabric_recommendation_failed", get_current_lang()))
+                st.stop()
 
-    # 渲染本地化的面料名称和说明
+    # 渲染本地化的面料名称和说明，带置信度条
     for i, item in enumerate(candidates, 1):
         if len(item) == 4:
             name, score, display_name, notes = item
@@ -864,6 +956,15 @@ else:
             score_label = t("candidates.score", get_current_lang())
             # 第一行:名称 + 分数
             st.write(f"{i}. **{display_name}** — {score_label}: **{score:.2f}**")
+            
+            # 置信度条（限制在 0.0-1.0 范围内）
+            confidence_pct = int(min(max(score, 0.0), 1.0) * 100)
+            st.progress(confidence_pct / 100.0)
+            
+            # 低置信度警告
+            if score < 0.30:
+                st.caption("⚠️ 建议人工确认/补图")
+            
             # 第二行:描述(可选,截断)
             if notes and isinstance(notes, str) and notes.strip():
                 max_len = 30
@@ -881,5 +982,13 @@ else:
             name, score = item[:2]
             score_label = t("candidates.score", get_current_lang())
             st.write(f"{i}. **{name}** — {score_label}: **{score:.2f}**")
+            
+            # 置信度条（限制在 0.0-1.0 范围内）
+            confidence_pct = int(min(max(score, 0.0), 1.0) * 100)
+            st.progress(confidence_pct / 100.0)
+            
+            # 低置信度警告
+            if score < 0.30:
+                st.caption("⚠️ 建议人工确认/补图")
 
     # 旧调试蒙版渲染已禁用,避免重复大图渲染

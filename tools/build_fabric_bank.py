@@ -1,108 +1,103 @@
-# -*- coding: utf-8 -*-
-"""
-Build fabric reference bank by extracting CLIP embeddings from reference images.
-构建面料参考库，从参考图像中提取 CLIP 嵌入
-
-Usage:
-    python tools/build_fabric_bank.py
-
-Input:
-    data/fabrics/<fabric_id>/*.jpg
-    
-Output:
-    data/fabric_bank.npz
-"""
+# tools/build_fabric_bank.py
 from __future__ import annotations
 from pathlib import Path
 from PIL import Image
 import numpy as np
-import sys
-import os
+import sys, traceback
+
+# Bootstrap robustness (faulthandler, AVIF, sys.path)
+try:
+    from tools._bootstrap import run_main_safely  # type: ignore
+except Exception:
+    run_main_safely = None
 
 # Add project root to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.clip_infer import image_to_emb
+from src.dual_clip import image_to_emb
 
 ROOT = Path("data/fabrics")
 OUT = Path("data/fabric_bank.npz")
 
 def collect_images():
-    """
-    Collect and encode all reference images in data/fabrics/.
-    收集并编码 data/fabrics/ 中的所有参考图像
-    
-    Returns:
-        Dict mapping fabric_id -> numpy array of embeddings (N, D)
-    """
     if not ROOT.exists():
-        print(f"[ERROR] Directory not found: {ROOT.resolve()}")
-        print("Please create data/fabrics/<fabric_id>/ and add reference images.")
+        print(f"[ERR] {ROOT} not found", flush=True)
         return {}
-    
-    fabric_dirs = [p for p in ROOT.iterdir() if p.is_dir()]
-    if not fabric_dirs:
-        print(f"[WARN] No subdirectories found in {ROOT.resolve()}")
-        print("Expected structure: data/fabrics/<fabric_id>/*.jpg")
+    fabrics = [p for p in ROOT.iterdir() if p.is_dir()]
+    if not fabrics:
+        print(f"[WARN] no subfolders under {ROOT}", flush=True)
         return {}
-    
     bank = {}
-    for d in fabric_dirs:
+    for d in fabrics:
+        print(f"[{d.name}] scanning...", flush=True)
         embs = []
-        image_files = (
-            list(d.glob("*.jpg")) + 
-            list(d.glob("*.jpeg")) + 
-            list(d.glob("*.png"))
-        )
-        
-        for img_p in sorted(image_files):
+        # Recursively find images in subfolders as well
+        patterns = ("**/*.jpg", "**/*.jpeg", "**/*.png", "**/*.JPG", "**/*.PNG", "**/*.JPEG")
+        imgs = []
+        for pat in patterns:
+            imgs.extend(d.glob(pat))
+        if not imgs:
+            print(f"  (no images)", flush=True)
+            continue
+        for i, img_p in enumerate(sorted(imgs), 1):
             try:
+                print(f"  ({i}/{len(imgs)}) loading {img_p.name} ...", flush=True)
                 img = Image.open(img_p).convert("RGB")
                 emb = image_to_emb(img)
                 embs.append(emb)
-                print(f"  [{d.name}] Processed: {img_p.name}")
-            except Exception as e:
-                print(f"[skip] {img_p}: {e}")
-        
+                print(f"    ✓ encoded", flush=True)
+            except Exception:
+                traceback.print_exc()
+                print(f"    ✗ skip {img_p}", flush=True)
         if embs:
-            bank[d.name] = np.stack(embs, axis=0)
-            print(f"[OK] {d.name}: {len(embs)} images -> shape {bank[d.name].shape}")
-        else:
-            print(f"[WARN] {d.name}: No valid images found")
-    
+            arr = np.stack(embs, axis=0)
+            bank[d.name] = arr
+            print(f"  → collected {len(embs)} embeddings", flush=True)
+            print(f"[{d.name}] {len(embs)} samples -> {arr.shape}", flush=True)
     return bank
 
 def save_npz(bank: dict):
-    """
-    Save fabric bank to compressed NPZ file.
-    将面料库保存为压缩的 NPZ 文件
-    """
     if not bank:
-        print("\n[ERROR] No embeddings collected. Make sure data/fabrics/<id> has images.")
-        print("Expected structure:")
-        print("  data/fabrics/")
-        print("    ├── cotton/")
-        print("    │   ├── ref1.jpg")
-        print("    │   └── ref2.jpg")
-        print("    ├── silk/")
-        print("    │   └── ref1.jpg")
-        print("    └── ...")
+        print("[ERR] empty bank, nothing to save.", flush=True)
         return
     
-    # Ensure output directory exists
+    # A. 最少样本过滤统计
+    print("\n[STATS] 样本统计:", flush=True)
+    valid_classes = []
+    for k, v in bank.items():
+        count = v.shape[0]
+        status = "✓" if count >= 3 else "⚠"
+        print(f"  {status} {k:<15}: {count:2d} samples", flush=True)
+        if count >= 3:
+            valid_classes.append(k)
+    
+    print(f"\n[FILTER] 有效类别: {len(valid_classes)}/{len(bank)} (≥3 samples)", flush=True)
+    
+    # B. 生成类中心向量
+    centroids = {}
+    for k in valid_classes:
+        centroids[k] = bank[k].mean(axis=0, keepdims=True).astype("float32")
+    
     OUT.parent.mkdir(parents=True, exist_ok=True)
     
+    # 保存完整bank
     np.savez_compressed(OUT, **bank)
-    total_images = sum(embs.shape[0] for embs in bank.values())
-    print(f"\n{'='*60}")
-    print(f"✅ Saved fabric bank -> {OUT.resolve()}")
-    print(f"   Total fabrics: {len(bank)}")
-    print(f"   Total images: {total_images}")
-    print(f"   File size: {OUT.stat().st_size / 1024:.1f} KB")
-    print(f"{'='*60}")
+    print(f"[OK] saved → {OUT.resolve()}", flush=True)
+    
+    # 保存类中心向量
+    if centroids:
+        centroids_out = Path("data/fabric_centroids.npz")
+        np.savez_compressed(centroids_out, **centroids)
+        print(f"[OK] saved → {centroids_out.resolve()}", flush=True)
+        print(f"[INFO] centroids: {len(centroids)} classes", flush=True)
 
-if __name__ == "__main__":
-    print("Building fabric reference bank...\n")
+def _cli():
+    print("[1/2] building fabric bank ...", flush=True)
     bank = collect_images()
+    print("[2/2] saving ...", flush=True)
     save_npz(bank)
 
+if __name__ == "__main__":
+    if run_main_safely:
+        raise SystemExit(run_main_safely(_cli))
+    _cli()

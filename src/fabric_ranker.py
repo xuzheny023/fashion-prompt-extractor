@@ -403,6 +403,16 @@ def localize_fabric(rule_or_name: Union[Dict, str], lang: str) -> Tuple[str, str
             # Try to find the rule by name
             fabric_name = rule_or_name
 
+            # Try loading from new fabric_labels system first
+            try:
+                from src.fabric_labels import get_label
+                if lang == "zh":
+                    chinese_label = get_label(fabric_name, fallback_to_id=False)
+                    if chinese_label:
+                        return chinese_label, ""
+            except Exception:
+                pass
+
             # Try fine rules first
             try:
                 fine_rules = _load_rules_fine()
@@ -528,10 +538,65 @@ def recommend_fabrics_localized(attrs: Dict, lang: str = "en", top_k: int = 5,
     return localized_results
 
 
+def load_bank():
+    """Load fabric bank and centroids for CLIP retrieval."""
+    import numpy as np
+    from pathlib import Path
+    
+    bank_path = Path("data/fabric_bank.npz")
+    centroids_path = Path("data/fabric_centroids.npz")
+    
+    bank = None
+    centroids = None
+    
+    if bank_path.exists():
+        bank = np.load(bank_path, allow_pickle=True)
+    
+    if centroids_path.exists():
+        centroids = np.load(centroids_path, allow_pickle=True)
+    
+    return bank, centroids
+
+
+def rank_with_centroids(query_emb, bank, centroids, topk=5):
+    """
+    Rank fabrics using centroids-first approach with fallback to full samples.
+    Returns list of (fabric_id, score) tuples sorted by score descending.
+    """
+    import numpy as np
+    from src.clip_infer import cosine_sim
+    
+    if centroids is None or bank is None:
+        return []
+    
+    # Step 1: Centroids-first retrieval
+    centroid_scores = {}
+    for k in centroids.files:
+        centroid_emb = centroids[k][0]  # [1,512] -> [512]
+        centroid_scores[k] = float(cosine_sim(query_emb, centroid_emb))
+    
+    centroid_top = sorted(centroid_scores.items(), key=lambda x: x[1], reverse=True)[:topk]
+    
+    # Step 2: Check if we need fallback to full samples
+    if len(centroid_top) >= 2:
+        score_diff = centroid_top[0][1] - centroid_top[1][1]
+        if score_diff < 0.03:
+            # Fallback to full samples for close scores
+            scores = {}
+            for k in bank.files:
+                if bank[k].shape[0] >= 3:  # Minimum sample filter
+                    embs = bank[k]
+                    sims = [cosine_sim(query_emb, e) for e in embs]
+                    scores[k] = float(np.max(sims))
+            return sorted(scores.items(), key=lambda x: x[1], reverse=True)[:topk]
+    
+    return centroid_top
+
+
 def fuse_with_clip(patch_img, base_results: List[Tuple], lang="zh", alpha=0.7, topk=5) -> List[Tuple[str, float, str, str]]:
     """
-    Fuse rule-based recommendations with CLIP retrieval scores.
-    融合基于规则的推荐与 CLIP 检索分数
+    Fuse rule-based recommendations with CLIP retrieval scores using centroids-first approach.
+    融合基于规则的推荐与 CLIP 检索分数（类中心优先）
     
     Args:
         patch_img: PIL.Image of the fabric patch / 面料区域的 PIL 图像
@@ -546,7 +611,15 @@ def fuse_with_clip(patch_img, base_results: List[Tuple], lang="zh", alpha=0.7, t
     """
     try:
         from PIL import Image
-        from src.clip_infer import rank_by_retrieval
+        from src.clip_infer import image_to_emb
+        
+        # Load bank and centroids
+        bank, centroids = load_bank()
+        if bank is None:
+            return base_results[:topk]
+        
+        # Get query embedding
+        query_emb = image_to_emb(patch_img)
         
         # 1) Extract base scores (0-1 range)
         base = {}
@@ -565,16 +638,12 @@ def fuse_with_clip(patch_img, base_results: List[Tuple], lang="zh", alpha=0.7, t
                 base[name] = float(score)
                 metadata[name] = (name, "")
         
-        # 2) Get CLIP retrieval scores (cosine similarity -1~1, map to [0,1])
-        clip_ranks = rank_by_retrieval(patch_img, topk=topk * 2)  # Get more candidates
+        # 2) Get CLIP retrieval scores using centroids-first approach
+        clip_ranks = rank_with_centroids(query_emb, bank, centroids, topk=topk * 2)
         clip = {}
-        for r in clip_ranks:
-            fid = r["id"]
-            # Cosine similarity typically in [-1, 1], but CLIP usually [0, 1]
-            # We normalize to [0, 1] range conservatively
-            score_raw = float(r["score"])
-            score_normalized = max(0.0, min(1.0, (score_raw + 1.0) / 2.0))
-            clip[fid] = score_normalized
+        for fid, score_raw in clip_ranks:
+            # CLIP scores are already in [0, 1] range
+            clip[fid] = float(score_raw)
         
         # 3) Fuse scores
         all_ids = set(base) | set(clip)

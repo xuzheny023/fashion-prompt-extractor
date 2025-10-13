@@ -4,39 +4,61 @@ CLIP-based fabric retrieval inference module.
 基于 CLIP 的面料检索推理模块
 """
 from __future__ import annotations
-import os, json
-from pathlib import Path
-from typing import Dict, List, Tuple
+import os
 import numpy as np
 import torch
+from pathlib import Path
+from typing import Dict, List, Tuple
 from PIL import Image
 
-# lazy import to speed cold start
 _model = None
-_preprocess = None
-_device = "cuda" if torch.cuda.is_available() else "cpu"
+_processor = None
 
 def _load_model():
-    global _model, _preprocess
+    global _model, _processor
     if _model is not None:
-        return _model, _preprocess
-    # open-clip lazy import
-    from open_clip import create_model_and_transforms
-    _model, _, _preprocess = create_model_and_transforms("ViT-B-32", pretrained="openai")
-    _model.to(_device).eval()
-    return _model, _preprocess
+        return _model, _processor
+
+    # 彻底禁用 CUDA，排除驱动卡住
+    os.environ["CUDA_VISIBLE_DEVICES"] = ""
+    os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"  # 禁用 tensorflow 警告
+    device = "cpu"
+
+    # 使用 transformers 库加载您已下载的 HuggingFace 格式模型
+    from transformers import CLIPModel, CLIPProcessor
+    import traceback
+    
+    print("[CLIP] Loading from local cache...", flush=True)
+    local_model_path = str(Path.home() / ".cache" / "open_clip" / "ViT-B-32" / "openai")
+    
+    try:
+        # 尝试从本地加载
+        print(f"[CLIP] Model path: {local_model_path}", flush=True)
+        _processor = CLIPProcessor.from_pretrained(local_model_path, local_files_only=True)
+        _model = CLIPModel.from_pretrained(local_model_path, local_files_only=True)
+        print(f"[CLIP] ✓ Loaded successfully from local cache!", flush=True)
+    except Exception as e:
+        print(f"[CLIP] ✗ Local load failed: {str(e)[:200]}", flush=True)
+        print(f"[CLIP] Downloading from HuggingFace (using mirror)...", flush=True)
+        os.environ.setdefault("HF_ENDPOINT", "https://hf-mirror.com")
+        _processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
+        _model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
+        print("[CLIP] ✓ Downloaded and loaded", flush=True)
+    
+    _model.to(device).eval()
+    return _model, _processor
 
 def image_to_emb(img: Image.Image) -> np.ndarray:
     """
     Convert PIL Image to CLIP embedding vector.
     将 PIL 图像转换为 CLIP 嵌入向量
     """
-    model, preprocess = _load_model()
+    model, processor = _load_model()
     with torch.no_grad():
-        t = preprocess(img).unsqueeze(0).to(_device)
-        e = model.encode_image(t)
+        inputs = processor(images=img, return_tensors="pt")
+        e = model.get_image_features(**inputs)
         e = e / e.norm(dim=-1, keepdim=True)
-    return e.squeeze(0).detach().cpu().numpy()
+    return e.squeeze(0).cpu().numpy()
 
 def cosine_sim(a: np.ndarray, b: np.ndarray) -> float:
     """
