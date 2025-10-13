@@ -279,6 +279,7 @@ weights = {
 with st.sidebar.expander(t("sidebar.exp_weight", get_current_lang())):
     # Debug block removed
     st.write(weights)
+streamlit run app.py
 
 if st.sidebar.button(t("sidebar.save_default", get_current_lang())):
     save_rules_weights(weights)
@@ -607,19 +608,19 @@ else:
                     for i, (name, score, explain) in enumerate(items, 1):
                         disp, notes = localize_fabric(name, get_current_lang())
                         score_label = t("candidates.score", get_current_lang())
-                        
+
                         # Convert score to confidence percentage (0-100)
                         confidence_pct = int(score * 100)
-                        
+
                         # Unified single-row: index, name and score with confidence bar
                         st.markdown(
                             f"<div class='row'><span class='idx'>{i}.</span><span class='name'>{disp}</span><span class='score'>{score_label} {score:.2f}</span></div>",
                             unsafe_allow_html=True,
                         )
-                        
+
                         # Add confidence bar
                         st.progress(confidence_pct / 100.0)
-                        
+
                         # Show low confidence warning
                         if score < 0.30:
                             st.caption("⚠️ 建议人工确认/补图")
@@ -826,7 +827,7 @@ else:
 
     # Main candidates section
     st.markdown("### " + t("main.candidates_title", get_current_lang()))
-    
+
     # 选择推荐方式：CLIP 向量检索 或 传统规则基
     if use_clip:
         # CLIP-based recommendation with progress bar
@@ -836,13 +837,13 @@ else:
             import hashlib
             from src.fabric_clip_ranker import retrieve_topk, load_centroids, load_bank
             from src.fabric_labels import get_label
-            
+
             # 优化1: 缓存编码器（避免重复加载模型）
             @st.cache_resource(show_spinner=False)
             def get_encoder_cached():
                 from src.dual_clip import get_encoder
                 return get_encoder()
-            
+
             # 优化2: 缓存编码结果（避免重复编码相同图片）
             @st.cache_data(show_spinner=False)
             def encode_image_cached(img_bytes: bytes):
@@ -851,16 +852,16 @@ else:
                 from src.dual_clip import image_to_emb
                 img = PILImage.open(io.BytesIO(img_bytes))
                 return image_to_emb(img)
-            
+
             st.info("🧠 使用 CLIP 双通道向量检索…")
             pb = st.progress(0, text="初始化模型与数据…")
-            
+
             # 0) 预加载（缓存里很快）
             _ = get_encoder_cached()  # 预加载编码器
             _ = load_centroids()
             _ = load_bank()
             pb.progress(0.05, text="已加载类中心向量…")
-            
+
             # 1) 编码查询（使用缓存）
             t0 = time.perf_counter()
             # 将 PIL Image 转为 bytes 用于缓存 key
@@ -868,32 +869,32 @@ else:
             img_buffer = io.BytesIO()
             image.save(img_buffer, format='PNG')
             img_bytes = img_buffer.getvalue()
-            
+
             q = encode_image_cached(img_bytes)
             # 归一化
             q = q.astype("float32")
             q = q / (np.linalg.norm(q) + 1e-12)
             pb.progress(0.25, text="已生成查询向量 (1536维)…")
-            
+
             # 2) 粗排 + 精排（优化3: 使用较小的 TOPC）
             topc = 10  # 从 12 降到 10，更快且效果接近
             pb.progress(0.40, text=f"进行类中心粗排（TopC={topc}）…")
             topk_list, coarse_max = retrieve_topk(q, topk=5, topc=topc)
             pb.progress(0.85, text="类内精排完成…")
-            
+
             # 3) 收尾
             used_ms = (time.perf_counter() - t0) * 1000
             pb.progress(1.0, text=f"✓ 完成：{used_ms:.0f} ms")
-            
+
             # 转换为统一格式 (name, score, display_name, notes)
             candidates = []
             for fabric_id, score in topk_list:
                 display_name = get_label(fabric_id) if get_current_lang() == "zh" else fabric_id
                 candidates.append((fabric_id, score, display_name, ""))
-            
+
             # 显示性能指标
             st.caption(f"📊 粗排最高分: {coarse_max:.3f} · 检索用时: {used_ms:.0f} ms")
-            
+
         except FileNotFoundError as e:
             st.error(f"❌ 向量库未找到：{e}")
             st.info("💡 请先运行：`python tools/build_fabric_bank.py`")
@@ -956,15 +957,15 @@ else:
             score_label = t("candidates.score", get_current_lang())
             # 第一行:名称 + 分数
             st.write(f"{i}. **{display_name}** — {score_label}: **{score:.2f}**")
-            
+
             # 置信度条（限制在 0.0-1.0 范围内）
             confidence_pct = int(min(max(score, 0.0), 1.0) * 100)
             st.progress(confidence_pct / 100.0)
-            
+
             # 低置信度警告
             if score < 0.30:
                 st.caption("⚠️ 建议人工确认/补图")
-            
+
             # 第二行:描述(可选,截断)
             if notes and isinstance(notes, str) and notes.strip():
                 max_len = 30
@@ -982,11 +983,11 @@ else:
             name, score = item[:2]
             score_label = t("candidates.score", get_current_lang())
             st.write(f"{i}. **{name}** — {score_label}: **{score:.2f}**")
-            
+
             # 置信度条（限制在 0.0-1.0 范围内）
             confidence_pct = int(min(max(score, 0.0), 1.0) * 100)
             st.progress(confidence_pct / 100.0)
-            
+
             # 低置信度警告
             if score < 0.30:
                 st.caption("⚠️ 建议人工确认/补图")
