@@ -52,12 +52,72 @@ try:
 except Exception:
     def E(name): return {"app": "🎯", "recommend": "📊", "clip": "🔍"}.get(name, "•")
 
+# ==================== 组件依赖可用性探测 ====================
+WEB_CROPPER_AVAILABLE = bool('web_cropper' in globals() and web_cropper)
+
+CROP_CANVAS_AVAILABLE = False
+try:
+    from streamlit_drawable_canvas import st_canvas  # noqa: F401
+    CROP_CANVAS_AVAILABLE = True
+except Exception:
+    CROP_CANVAS_AVAILABLE = False
+
+DASHSCOPE_AVAILABLE = False
+try:
+    import dashscope  # noqa: F401
+    from dashscope import MultiModalConversation  # noqa: F401
+    DASHSCOPE_AVAILABLE = True
+except Exception:
+    DASHSCOPE_AVAILABLE = False
+
 # ==================== 辅助函数 ====================
 def pil_to_b64(img: Image.Image) -> str:
     """Convert PIL image to base64 string (PNG format, no data: prefix)."""
     buf = io.BytesIO()
     img.save(buf, format="PNG")
     return base64.b64encode(buf.getvalue()).decode("utf-8")
+
+def ensure_min_size(pil_img: Image.Image, tgt: int = 640) -> Image.Image:
+    """保证传云端的图片最短边≥tgt，避免太小导致识别失败。"""
+    w, h = pil_img.size
+    if min(w, h) >= tgt:
+        return pil_img
+    scale = tgt / float(min(w, h))
+    nw, nh = int(round(w * scale)), int(round(h * scale))
+    return pil_img.resize((nw, nh), Image.LANCZOS)
+
+def try_parse_json(text: str):
+    """尝试从文本中解析 JSON，兼容 ```json 代码块与首个对象兜底。"""
+    import json as _json
+    import re as _re
+    t = (text or "").strip()
+    # 1) 直接解析
+    try:
+        return _json.loads(t)
+    except Exception:
+        pass
+    # 2) ```json 代码块
+    if "```" in t:
+        m = _re.search(r"```json\s*(\{[\s\S]*?\})\s*```", t, flags=_re.I)
+        if m:
+            try:
+                return _json.loads(m.group(1))
+            except Exception:
+                pass
+        m = _re.search(r"```\s*(\{[\s\S]*?\})\s*```", t)
+        if m:
+            try:
+                return _json.loads(m.group(1))
+            except Exception:
+                pass
+    # 3) 首个对象兜底
+    m = _re.search(r"\{[\s\S]*?\}", t)
+    if m:
+        try:
+            return _json.loads(m.group(0))
+        except Exception:
+            return None
+    return None
 
 def crop_by_rect(img: Image.Image, rect: dict | None, display_width: int) -> Tuple[Image.Image, Optional[dict]]:
     """
@@ -119,29 +179,40 @@ def crop_by_rect(img: Image.Image, rect: dict | None, display_width: int) -> Tup
 with st.sidebar:
     st.title("👔 面料分析器")
     st.caption("AI-Powered Fabric Recognition")
-
+    
     uploaded_file = st.file_uploader(
         "📤 上传面料图片",
         type=["jpg", "jpeg", "png"],
         help="支持 JPG、PNG 格式"
     )
-
-    st.divider()
-    with st.expander(f"{E('recommend')} 参数设置", expanded=False):
-        top_k = st.slider("返回结果数", 3, 10, 5)
-        lang = st.selectbox("语言", ["zh", "en"], index=0)
-        use_crop = st.checkbox("使用交互裁剪区域进行识别", value=True, help="若可用，将优先用裁剪区域做检索")
     
     st.divider()
-    with st.expander("🔑 API 配置", expanded=False):
-        api_key = get_api_key()
-        if api_key:
-            st.success("✅ API Key 已配置")
-            st.caption(f"来源: {'secrets.toml' if 'DASHSCOPE_API_KEY' in st.secrets else '环境变量'}")
-        else:
-            st.warning("⚠️ 未配置 API Key")
-            st.caption("请在 `.streamlit/secrets.toml` 中设置：")
-            st.code('DASHSCOPE_API_KEY = "sk-xxx"', language="toml")
+    st.header("⚙️ 参数设置")
+    
+    # 裁剪与预览
+    crop_size = st.slider("选框大小(px)", 60, 240, 120, 2)
+    zoom_ratio = st.slider("预览放大倍数", 1.0, 2.0, 1.5, 0.05)
+    
+    # 云端模型选择
+    engine = st.selectbox("云端模型 / Cloud Engine", ["qwen-vl", "qwen-vl-plus"], index=0)
+    # 语言选择
+    lang = st.radio("语言 / Language", ["zh", "en"], index=0, horizontal=True)
+    
+    # 联网检索（先保留，不影响可用性）
+    enable_web = st.checkbox("启用联网检索", value=False)
+    k_per_query = st.slider("每个候选检索条数", 1, 10, 4)
+    top_k = st.slider("返回结果数", 3, 10, 5)
+        
+    # 裁剪选项
+    use_crop = st.checkbox("使用交互裁剪区域进行识别", value=True, help="若可用，将优先用裁剪区域做检索")
+    
+    # 密钥与 SDK 状态指示
+    try:
+        _api_key = st.secrets.get("DASHSCOPE_API_KEY") or os.getenv("DASHSCOPE_API_KEY")
+    except Exception:
+        _api_key = os.getenv("DASHSCOPE_API_KEY")
+    st.markdown(f"**DashScope SDK**：{'✅' if DASHSCOPE_AVAILABLE else '❌'}")
+    st.markdown(f"**API Key**：{'✅ 已读取' if _api_key else '❌ 缺失'}")
     
     st.divider()
     with st.expander("ℹ️ 关于", expanded=False):
@@ -152,96 +223,133 @@ with st.sidebar:
         - ✅ 轻量级架构  
         """)
 
-# ==================== 主界面 ====================
 st.title(f"{E('app')} AI 面料识别与分析")
 st.caption("基于云端 API 的智能面料识别系统")
 
-if uploaded_file is None:
-    st.info("👈 请在左侧上传面料图片开始分析")
-    st.stop()
-
-# 加载图片
-try:
-    image = Image.open(uploaded_file).convert("RGB")
-    log.info(f"图片已加载: {uploaded_file.name}, 尺寸: {image.size}")
-except Exception as e:
-    st.error(f"❌ 图片加载失败: {e}")
-    st.stop()
+# 结果展示（统一）
+def render_result_block(result: dict, engine_name: str):
+    st.caption(f"引擎：{engine_name}")
+    if result.get("labels"):
+        st.success("已识别")
+        labs = result.get("labels", [])
+        confs = result.get("confidences", [])
+        for i, lab in enumerate(labs):
+            c = confs[i] if i < len(confs) else None
+            st.markdown(f"**{i+1}. {lab}** " + (f"（{c:.2%}）" if isinstance(c, (float, int)) else ""))
+    else:
+        st.warning("未识别到明确面料标签")
+    with st.expander("🧠 解释 / Reasoning", expanded=True):
+        st.write(result.get("reasoning") or result.get("raw") or "（无）")
 
 # ==================== 布局：左预览 / 右推荐 ====================
-left_col, right_col = st.columns([1, 1])
+colL, colR = st.columns([7, 5], gap="large")
 
-with left_col:
-    st.subheader("📷 图片预览 / 交互裁剪")
-
-    crop_rect = None
-    display_width = 800  # Component max display width
-    
-    if web_cropper is None:
-        # Graceful fallback: show warning and full image
-        if use_crop:
-            st.warning("⚠️ 裁剪组件不可用，使用完整图片进行识别")
-        st.image(image, use_container_width=True, caption=f"原始图片 ({image.width} × {image.height})")
-    else:
-        # Use web_cropper component
+with colL:
+    st.subheader("图片预览 / 交互裁剪")
+    img = None
+    uploaded = uploaded_file
+    if uploaded:
         try:
-            b64 = pil_to_b64(image)
-            st.caption("💡 拖动矩形移动位置 • 拖动右下角调整大小 • 点击 Confirm 确认")
-            
-            res = web_cropper(
-                key="web_cropper_main",
-                image_b64=b64,
-                box=None,
-                minSize=32
-            )
-            
-            # Check if user confirmed a crop area
-            if isinstance(res, dict) and isinstance(res.get("rect"), dict):
-                crop_rect = res["rect"]
-                st.success(f"✓ 已选择裁剪区域：{int(crop_rect['w'])} × {int(crop_rect['h'])} px")
-            else:
-                st.info("👆 调整裁剪框后点击 Confirm 按钮")
-        except Exception as e:
-            log.error(f"Web cropper error: {e}")
-            st.warning(f"⚠️ 裁剪组件出错，使用完整图片：{e}")
-            st.image(image, use_container_width=True)
+            img = Image.open(uploaded).convert("RGB")
+        except Exception as _e:
+            st.error(f"图片加载失败：{_e}")
+            img = None
+        if img:
+            st.image(img, caption=f"原始图片（{img.size[0]}×{img.size[1]}）", use_container_width=True)
 
-    # Process crop if enabled and available
-    if use_crop and crop_rect:
-        crop_img, crop_meta = crop_by_rect(image, crop_rect, display_width)
-        if crop_meta:
-            st.divider()
-            st.caption(f"📐 裁剪区域：({crop_meta['x0']}, {crop_meta['y0']}) → ({crop_meta['x1']}, {crop_meta['y1']})")
-            st.image(crop_img, caption=f"裁剪预览 ({crop_meta['width']} × {crop_meta['height']})", use_container_width=True)
-            # Store cropped image for inference
-            st.session_state["_active_image_for_infer"] = crop_img
-            st.session_state["_active_meta"] = crop_meta
+        rect = None
+        patch = None
+
+        # 兜底 1：drawable-canvas（首选）
+        if img and CROP_CANVAS_AVAILABLE:
+            st.caption("🔧 使用 drawable-canvas 裁剪")
+            try:
+                canvas_res = st_canvas(
+                    fill_color="rgba(0, 0, 0, 0)",
+                    stroke_width=2,
+                    stroke_color="#00BFFF",
+                    background_image=img,
+                    update_streamlit=True,
+                    height=int(img.size[1] * 0.7),
+                    drawing_mode="rect",
+                    key="crop_canvas",
+                )
+                try:
+                    if canvas_res.json_data and canvas_res.json_data.get("objects"):
+                        obj = next((o for o in canvas_res.json_data["objects"] if o.get("type") == "rect"), None)
+                        if obj:
+                            x, y = int(obj.get("left", 0)), int(obj.get("top", 0))
+                            w, h = int(obj.get("width", 0)), int(obj.get("height", 0))
+                            rect = (x, y, x + w, y + h)
+                except Exception:
+                    rect = None
+            except AttributeError as ae:
+                st.warning("⚠️ 当前 Streamlit 与 drawable-canvas 不兼容，已自动切换到数值裁剪模式。")
+                log.warning(f"drawable-canvas AttributeError: {ae}")
+                rect = None
+            except Exception as e:
+                st.warning(f"⚠️ 裁剪组件出错，已自动切换到数值裁剪模式：{e}")
+                log.error(f"st_canvas error: {e}")
+                rect = None
+
+        # 兜底 2：数值裁剪（无前端依赖）
+        if img and rect is None:
+            st.caption("🧩 兜底：数值裁剪（无前端依赖）")
+            W, H = img.size
+            cx = st.slider("中心X", 0, W, W // 2)
+            cy = st.slider("中心Y", 0, H, H // 2)
+            half = int(crop_size) // 2
+            x1, y1 = max(0, cx - half), max(0, cy - half)
+            x2, y2 = min(W, cx + half), min(H, cy + half)
+            rect = (x1, y1, x2, y2)
+
+        # 生成 patch
+        if img and rect:
+            x1, y1, x2, y2 = map(int, rect)
+            x2, y2 = max(x2, x1 + 4), max(y2, y1 + 4)
+            patch = img.crop((x1, y1, x2, y2))
+        st.session_state["__patch__"] = patch
+    else:
+        st.info("请先上传图片")
+
+with colR:
+    st.subheader("推荐结果")
+    patch = st.session_state.get("__patch__")
+    if patch:
+        prev_w = int(patch.size[0] * float(zoom_ratio))
+        prev_h = int(patch.size[1] * float(zoom_ratio))
+        st.image(patch.resize((prev_w, prev_h), Image.LANCZOS), caption="预览区域", use_column_width=False)
+
+    rec_btn = st.button("🔎 识别该区域", use_container_width=True, disabled=not bool(patch))
+    if rec_btn:
+        if cloud_infer is None:
+            st.error("云端推理模块不可用")
+        elif not DASHSCOPE_AVAILABLE:
+            st.error("DashScope SDK 未安装")
         else:
-            # Invalid crop, use full image
-            st.session_state["_active_image_for_infer"] = image
-            st.session_state["_active_meta"] = None
-    else:
-        # Use full image
-        st.session_state["_active_image_for_infer"] = image
-        st.session_state["_active_meta"] = None
+            api_key_now = get_api_key()
+            if not api_key_now:
+                st.error("DASHSCOPE_API_KEY 缺失")
+            else:
+                with st.spinner("云端识别中..."):
+                    result = cloud_infer(patch, engine=engine, lang=lang, enable_web=enable_web, k_per_query=k_per_query)
+                render_result_block(result, engine)
 
-with right_col:
-    st.subheader(f"{E('recommend')} 推荐结果")
-    st.caption(f"{E('clip')} 云端 API 识别")
-    
-    # 调用推荐面板
-    render_recommend_panel(
-        image=st.session_state.get("_active_image_for_infer", image),
-        top_k=top_k,
-        lang=lang
-    )
-    
-    # Display engine info (for verification)
-    if 'last_meta' in st.session_state and st.session_state.last_meta:
-        engine = st.session_state.last_meta.get('engine', '未知')
-        st.caption(f"🔧 引擎: {engine}")
-    else:
-        st.caption("🔧 引擎: 未返回")
+    # 兜底：整图识别
+    if (not patch) and uploaded_file and 'img' in locals() and isinstance(img, Image.Image):
+        if st.button("🔎 直接识别整图（兜底）", use_container_width=True):
+            if cloud_infer is None:
+                st.error("云端推理模块不可用")
+            elif not DASHSCOPE_AVAILABLE:
+                st.error("DashScope SDK 未安装")
+            else:
+                api_key_now = get_api_key()
+                if not api_key_now:
+                    st.error("DASHSCOPE_API_KEY 缺失")
+                else:
+                    with st.spinner("云端识别中..."):
+                        result = cloud_infer(img, engine=engine, lang=lang, enable_web=enable_web, k_per_query=k_per_query)
+                    render_result_block(result, engine)
 
 # ==================== 底部信息 ====================
 st.divider()

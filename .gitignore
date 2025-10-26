@@ -12,8 +12,11 @@ venv/
 env/
 ENV/
 
-# Streamlit
+# --- 不上传密钥 ---
 .streamlit/secrets.toml
+.env
+secrets.toml
+
 
 # Cache
 .cache/

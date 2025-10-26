@@ -1,64 +1,71 @@
 # -*- coding: utf-8 -*-
 """
-Cloud VLM (Qwen-VL) inference for fabric analysis.
-Open-Set Recognition + RAG (Retrieval-Augmented Generation).
+云端 VLM 面料识别 - 稳定版
+Cloud VLM fabric recognition with structured prompts and robust JSON parsing.
 """
 
-from __future__ import annotations
-import os
-import re
-import json
-import hashlib
 from typing import Dict, List
-import streamlit as st
+from PIL import Image
+import io
+import base64
+import os
+import json
+import re
 
 try:
+    import dashscope
     from dashscope import MultiModalConversation
 except Exception:
+    dashscope = None
     MultiModalConversation = None
 
+# ==================== 模型映射 ====================
+MODEL_MAP = {
+    "qwen-vl": "qwen-vl-plus",
+    "qwen-vl-plus": "qwen-vl-plus",
+}
 
-# ---------- Errors ----------
-class NoAPIKeyError(RuntimeError):
-    pass
+# ==================== 系统提示词 ====================
+SYS_PROMPT_ZH = (
+    "你是资深面料工程师。请基于给定图像中**被框选区域**，按以下结构化JSON输出："
+    '{"labels":[字符串数组，最多3个，按可能性降序],"confidences":[0-1数组，与labels对齐],'
+    '"reasoning":"你的判断依据（纹理、光泽、组织、密度、反光、起毛、褶皱等）"}。'
+    "若无法准确判断，请给出可能方向并降低置信度。禁止输出除JSON外的多余文字。"
+)
 
+SYS_PROMPT_EN = (
+    "You are a senior textile engineer. Based on the cropped region, "
+    'return pure JSON: {"labels":[... up to 3],"confidences":[0-1],"reasoning":"..."}. '
+    "If uncertain, provide likely directions with lower confidences. No extra text."
+)
 
-# ---------- Helpers ----------
-def _need_secret(name: str) -> str:
-    """Read secret from st.secrets or env. Raise NoAPIKeyError if missing."""
-    v = None
+# ==================== 辅助函数 ====================
+def image_to_dashscope_bytes(img: Image.Image) -> bytes:
+    """将 PIL Image 转换为 DashScope 接受的字节流"""
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    return buf.getvalue()
+
+def make_prompt(lang: str) -> str:
+    """根据语言选择系统提示词"""
+    return SYS_PROMPT_ZH if lang == "zh" else SYS_PROMPT_EN
+
+def try_parse_json(text: str) -> dict:
+    """
+    简单 JSON 抽取（从大段文字里找首个 {...}）
+    
+    尝试策略：
+    1. 直接 json.loads
+    2. 提取 markdown 代码块
+    3. 正则提取第一个 JSON 对象
+    """
+    # 策略1: 直接解析
     try:
-        v = st.secrets.get(name)
+        return json.loads(text.strip())
     except Exception:
-        v = None
-    v = v or os.getenv(name)
-    if not v:
-        raise NoAPIKeyError(f"Missing secret: {name}")
-    return v
-
-
-def _md5_file(path: str) -> str:
-    """Compute MD5 hash of a file."""
-    m = hashlib.md5()
-    with open(path, "rb") as f:
-        for chunk in iter(lambda: f.read(1024 * 1024), b""):
-            m.update(chunk)
-    return m.hexdigest()
-
-
-def _extract_json(text: str) -> dict:
-    """
-    Robustly extract JSON from LLM response.
+        pass
     
-    Strategies:
-    1. Try markdown code block extraction (```json ... ```)
-    2. Try regex to find first JSON object
-    3. Try direct json.loads
-    
-    Returns:
-        Parsed dict or empty dict if all strategies fail
-    """
-    # Strategy 1: Markdown code block
+    # 策略2: 提取 markdown 代码块
     if "```json" in text:
         try:
             json_text = text.split("```json")[1].split("```")[0].strip()
@@ -73,410 +80,232 @@ def _extract_json(text: str) -> dict:
         except Exception:
             pass
     
-    # Strategy 2: Regex to find first JSON object
-    try:
-        match = re.search(r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}', text, re.DOTALL)
-        if match:
-            json_text = match.group(0)
-            return json.loads(json_text)
-    except Exception:
-        pass
-    
-    # Strategy 3: Direct parse
-    try:
-        return json.loads(text.strip())
-    except Exception:
-        pass
+    # 策略3: 正则提取
+    match = re.search(r'\{.*\}', text, flags=re.S)
+    if match:
+        try:
+            return json.loads(match.group(0))
+        except Exception:
+            pass
     
     return {}
 
+def ensure_min_size(pil_img: Image.Image, tgt: int = 640) -> Image.Image:
+    """保证传云端的图片最短边≥tgt，避免太小导致识别失败"""
+    w, h = pil_img.size
+    if min(w, h) >= tgt:
+        return pil_img
+    scale = tgt / min(w, h)
+    nw, nh = int(w * scale), int(h * scale)
+    return pil_img.resize((nw, nh), Image.BICUBIC)
 
-# ---------- Prompt Templates ----------
-def _build_prompt_pass1(lang: str = "zh") -> str:
-    """Build prompt for Pass 1: open-set vision recognition."""
-    if lang.startswith("zh"):
-        return """你是专业的纺织品分析师。请仅基于给定的图片块，识别面料材质。
-
-**要求：**
-返回纯 JSON 格式（不要任何其他文本）：
-
-{
-  "candidates": [
-    {"label": "面料名称1", "confidence": 0.0-1.0},
-    {"label": "面料名称2", "confidence": 0.0-1.0},
-    ...最多8个候选
-  ],
-  "visual_notes": "1-2句话描述视觉特征"
-}
-
-**识别指南：**
-• 面料名称可以是任何真实材质（不限于常见面料）
-• 可使用专业术语（如Harris粗花呢、羊绒、经编针织等）
-• 按可能性从高到低排序
-• 置信度总和应接近1.0
-• visual_notes描述光泽、纹理、质感等"""
-    else:
-        return """You are a professional textile analyst. Based ONLY on the given image patch, identify the fabric material.
-
-**Requirements:**
-Return pure JSON format (no other text):
-
-{
-  "candidates": [
-    {"label": "fabric_name1", "confidence": 0.0-1.0},
-    {"label": "fabric_name2", "confidence": 0.0-1.0},
-    ...up to 8 candidates
-  ],
-  "visual_notes": "1-2 sentences describing visual features"
-}
-
-**Recognition Guidelines:**
-• Fabric names can be ANY real material (not limited to common fabrics)
-• You can use professional terms (e.g., Harris tweed, cashmere, warp knit, etc.)
-• Sort by likelihood from high to low
-• Confidences should sum to approximately 1.0
-• visual_notes should describe sheen, texture, feel, etc."""
-
-
-def _build_prompt_pass2(candidates_str: str, visual_notes: str, evidence_str: str, lang: str = "zh") -> str:
-    """Build prompt for Pass 2: RAG re-ranking with evidence."""
-    if lang.startswith("zh"):
-        return f"""给定初始候选和联网证据，重新排序并选择最多5个最终标签。输出纯JSON：
-
-{{
-  "labels": ["面料1", "面料2", "面料3", "面料4", "面料5"],
-  "confidences": [0.0-1.0, 0.0-1.0, 0.0-1.0, 0.0-1.0, 0.0-1.0],
-  "reasoning": "简短说明重排序理由（2-3句话）",
-  "evidence": [{{"label":"面料1", "urls":["url1","url2"]}}, ...]
-}}
-
-**指南：**
-• 优先选择定义/属性与visual_notes匹配的标签（光泽、纤维类型、编织方式）
-• 可包含具体名称（如Harris粗花呢、雪纺、经编针织、羊绒等）
-• 如果两个名称是同义词，保留更常见术语
-• labels必须从初始候选中选择
-• confidences总和应接近1.0
-
-**初始视觉判断：**
-{visual_notes}
-
-**初始候选：**
-{candidates_str}
-
-**联网证据：**
-{evidence_str}"""
-    else:
-        return f"""Given initial candidates and web evidence, re-rank and select up to 5 final labels. Output pure JSON:
-
-{{
-  "labels": ["fabric1", "fabric2", "fabric3", "fabric4", "fabric5"],
-  "confidences": [0.0-1.0, 0.0-1.0, 0.0-1.0, 0.0-1.0, 0.0-1.0],
-  "reasoning": "Brief explanation of re-ranking rationale (2-3 sentences)",
-  "evidence": [{{"label":"fabric1", "urls":["url1","url2"]}}, ...]
-}}
-
-**Guidelines:**
-• Prefer labels whose definitions/properties match visual_notes (sheen, fiber type, weave)
-• You may include specific names like Harris tweed, chiffon, warp knit, cashmere, etc.
-• If two names are synonyms, keep the more common term
-• labels must be selected from initial candidates
-• confidences should sum to approximately 1.0
-
-**Initial Visual Judgment:**
-{visual_notes}
-
-**Initial Candidates:**
-{candidates_str}
-
-**Web Evidence:**
-{evidence_str}"""
-
-
-# ---------- Engine Implementations ----------
-def _qwen_pass1(image_path: str, lang: str = "zh") -> Dict:
-    """
-    Pass 1: Qwen-VL vision recognition (open-set).
-    
-    Returns:
-        {
-            "candidates": [{"label": "...", "confidence": 0.0-1.0}, ...],
-            "visual_notes": "..."
-        }
-    """
-    if MultiModalConversation is None:
-        raise RuntimeError("dashscope not installed. pip install dashscope")
-    
-    api_key = _need_secret("DASHSCOPE_API_KEY")
-    prompt = _build_prompt_pass1(lang)
-    
-    # Call Qwen-VL
-    messages = [{
-            "role": "user",
-            "content": [
-            {"image": f"file://{image_path}"},
-                {"text": prompt}
-            ]
-    }]
-    
-    resp = MultiModalConversation.call(
-        api_key=api_key,
-        model="qwen-vl-plus",
-            messages=messages
-        )
-        
-    text = (resp.output.get("text") or "").strip()
-    
-    # Robust JSON extraction
-    data = _extract_json(text)
-    
-    if not data:
-        # Fallback: return empty candidates
-        return {"candidates": [], "visual_notes": text[:500] if text else ""}
-
-    return {
-        "candidates": data.get("candidates", []),
-        "visual_notes": data.get("visual_notes", "")
-    }
-
-
-def _qwen_pass2(candidates_str: str, visual_notes: str, evidence_str: str, lang: str = "zh") -> Dict:
-    """
-    Pass 2: Qwen-VL text re-ranking with RAG evidence.
-    
-    Returns:
-        {
-            "labels": ["...", ...],
-            "confidences": [0.0-1.0, ...],
-            "reasoning": "...",
-            "evidence": [{"label": "...", "urls": [...]}, ...]
-        }
-    """
-    if MultiModalConversation is None:
-        raise RuntimeError("dashscope not installed. pip install dashscope")
-    
-    api_key = _need_secret("DASHSCOPE_API_KEY")
-    prompt = _build_prompt_pass2(candidates_str, visual_notes, evidence_str, lang)
-    
-    # Call Qwen-VL (text-only)
-    messages = [{
-        "role": "user",
-        "content": [{"text": prompt}]
-    }]
-    
-    resp = MultiModalConversation.call(
-        api_key=api_key,
-        model="qwen-vl-plus",
-        messages=messages
-    )
-    
-    text = (resp.output.get("text") or "").strip()
-    
-    # Robust JSON extraction
-    data = _extract_json(text)
-    
-    if not data:
-        # Fallback: return empty result
-        return {"labels": [], "confidences": [], "reasoning": "", "evidence": []}
-        
-        return {
-        "labels": data.get("labels", []),
-        "confidences": data.get("confidences", []),
-        "reasoning": data.get("reasoning", ""),
-        "evidence": data.get("evidence", [])
-    }
-
-
-def _analyze_qwen(
-    image_path: str,
+# ==================== 云端推理 ====================
+def cloud_infer(
+    pil_image: Image.Image,
+    engine: str,
     lang: str = "zh",
     enable_web: bool = False,
-    web_k: int = 4,
-    web_lang: str = "zh"
+    k_per_query: int = 4
 ) -> Dict:
     """
-    Complete Qwen-VL analysis flow (Open-Set + RAG).
+    云端面料识别 - 稳定版
     
     Args:
-        image_path: Local image path
-        lang: Language code
-        enable_web: Whether to enable web verification
-        web_k: Number of search results per candidate
-        web_lang: Search language
+        pil_image: PIL Image 对象
+        engine: 模型引擎 ("qwen-vl", "qwen-vl-plus")
+        lang: 语言 ("zh", "en")
+        enable_web: 是否启用联网检索（暂未实现）
+        k_per_query: 每个候选检索条数（暂未实现）
     
     Returns:
         {
-            "materials": [...],  # Top-5
-            "confidence": [...],
-            "description": "...",
-            "engine": "cloud_qwen",
-            "evidence": [{"label": "...", "urls": [...]}, ...]
+            "labels": ["面料1", "面料2", ...],
+            "confidences": [0.6, 0.3, 0.1],
+            "reasoning": "判断依据",
+            "raw": "原始响应文本",
+            "model": "实际使用的模型名",
+            "engine": "cloud"
         }
     """
-    # Pass 1: Generate initial candidates
-    pass1_result = _qwen_pass1(image_path, lang)
-    candidates = pass1_result.get("candidates", [])
-    visual_notes = pass1_result.get("visual_notes", "")
-    
-    # If no candidates, return early
-    if not candidates:
+    # 检查依赖
+    if dashscope is None or MultiModalConversation is None:
         return {
-            "materials": [],
-            "confidence": [],
-            "description": visual_notes or "Unable to identify fabric",
-            "engine": "cloud_qwen",
-            "evidence": []
+            "labels": [],
+            "confidences": [],
+            "reasoning": "DashScope SDK 未安装。请运行: pip install dashscope",
+            "raw": "",
+            "model": engine,
+            "engine": "error"
         }
     
-    # If web search disabled, return Pass 1 results directly
-    if not enable_web:
-        labels = [c.get("label", "") for c in candidates[:5]]
-        confs = [c.get("confidence", 0.0) for c in candidates[:5]]
-        
-        # Normalize confidences
-        total = sum(confs) if sum(confs) > 0 else 1.0
-        confs = [c / total for c in confs]
-        
+    # 获取 API Key
+    api_key = os.getenv("DASHSCOPE_API_KEY")
+    if not api_key:
+        # 尝试从 streamlit secrets 读取
+        try:
+            import streamlit as st
+            api_key = st.secrets.get("DASHSCOPE_API_KEY")
+        except Exception:
+            pass
+    
+    if not api_key:
         return {
-            "materials": labels,
-            "confidence": confs,
-            "description": visual_notes,
-            "engine": "cloud_qwen",
-            "evidence": []
+            "labels": [],
+            "confidences": [],
+            "reasoning": "缺少 DASHSCOPE_API_KEY。请在 .streamlit/secrets.toml 或环境变量中配置。",
+            "raw": "",
+            "model": engine,
+            "engine": "error"
         }
     
-    # Pass 2: Web search + RAG re-ranking
-    try:
-        from src.aug.web_search import web_evidence
-        
-        # Search for top-N candidates (multi-engine fallback)
-        top_n = min(5, len(candidates))
-        evidence_map = {}  # {label: {"urls": [...], "snippets": [...]}}
-        
-        for cand in candidates[:top_n]:
-            label = cand.get("label", "")
-            if not label:
-                continue
-            
-            # Multi-engine search: DuckDuckGo → Wikipedia → Baidu Baike
-            results = web_evidence(label, lang=web_lang, k=web_k)
-            
-            if results:
-                urls = [r.get("url", "") for r in results if r.get("url")]
-                snippets = [r.get("snippet", "") for r in results]
-                evidence_map[label] = {"urls": urls[:3], "snippets": snippets[:2]}
-        
-        # Build evidence summary string
-        evidence_lines = []
-        for label, ev in evidence_map.items():
-            # Truncate snippets to 400 chars total
-            snippets_str = " ".join(ev["snippets"][:2])[:400]
-            urls_str = ", ".join(ev["urls"][:2])
-            evidence_lines.append(f"• {label}: {snippets_str}\n  URLs: {urls_str}")
-        evidence_str = "\n".join(evidence_lines[:5])
-        
-        # Build candidates string for prompt
-        candidates_lines = [
-            f"{i+1}. {c.get('label', '')} (confidence: {c.get('confidence', 0.0):.2f})"
-            for i, c in enumerate(candidates[:8])
+    # 设置 API Key
+    dashscope.api_key = api_key
+    
+    # 选择模型
+    model = MODEL_MAP.get(engine, "qwen-vl-plus")
+    
+    # 确保图片尺寸足够
+    pil_image = ensure_min_size(pil_image, 640)
+    
+    # 转换为字节流
+    img_bytes = image_to_dashscope_bytes(pil_image)
+    
+    # 构建消息
+    sys_msg = {"role": "system", "content": [{"text": make_prompt(lang)}]}
+    user_msg = {
+        "role": "user",
+        "content": [
+            {"image": img_bytes},
+            {"text": "识别该裁剪区域的材质" if lang == "zh" else "Identify the material of this cropped region"}
         ]
-        candidates_str = "\n".join(candidates_lines)
+    }
+    
+    # 调用 API
+    try:
+        response = MultiModalConversation.call(
+            model=model,
+            messages=[sys_msg, user_msg],
+            top_p=0.7,
+            temperature=0.2,
+        )
         
-        # Pass 2: Re-rank with evidence
-        pass2_result = _qwen_pass2(candidates_str, visual_notes, evidence_str, lang)
-        
-        labels = pass2_result.get("labels", [])[:5]
-        confs = pass2_result.get("confidences", [])[:5]
-        reasoning = pass2_result.get("reasoning", visual_notes)
-        evidence_list = pass2_result.get("evidence", [])
-        
-        # Normalize confidences
-        if not confs or len(confs) != len(labels):
-            # Fallback confidences
-            confs = [0.50, 0.20, 0.15, 0.10, 0.05][:len(labels)]
+        # 提取响应文本
+        if hasattr(response, 'output'):
+            if isinstance(response.output, dict):
+                raw_text = response.output.get('text', '') or response.output.get('content', '') or str(response.output)
+            else:
+                raw_text = str(response.output)
         else:
-            total = sum(confs) if sum(confs) > 0 else 1.0
-            confs = [c / total for c in confs]
+            raw_text = str(response)
         
-        # Build evidence list with URLs from evidence_map
-        final_evidence = []
-        for ev in evidence_list:
-            label = ev.get("label", "")
-            if label in evidence_map:
-                final_evidence.append({
-                    "label": label,
-                    "urls": evidence_map[label]["urls"][:3]
-                })
+        # 解析 JSON
+        data = try_parse_json(raw_text)
+        
+        if not data:
+            # 解析失败，返回原始文本
+            return {
+                "labels": [],
+                "confidences": [],
+                "reasoning": raw_text[:500] if raw_text else "模型返回为空",
+                "raw": raw_text,
+                "model": model,
+                "engine": "cloud"
+            }
+        
+        # 提取字段并兜底
+        labels = data.get("labels", [])
+        confidences = data.get("confidences", [])
+        reasoning = data.get("reasoning", raw_text)
+        
+        # 对齐 labels 和 confidences
+        if len(confidences) < len(labels):
+            # 补齐置信度
+            remaining = 1.0 - sum(confidences)
+            avg_conf = remaining / max(1, len(labels) - len(confidences))
+            confidences.extend([avg_conf] * (len(labels) - len(confidences)))
+        elif len(confidences) > len(labels):
+            # 截断置信度
+            confidences = confidences[:len(labels)]
+        
+        # 归一化置信度
+        total_conf = sum(confidences) if confidences else 1.0
+        if total_conf > 0:
+            confidences = [c / total_conf for c in confidences]
         
         return {
-            "materials": labels,
-            "confidence": confs,
-            "description": reasoning,
-            "engine": "cloud_qwen",
-            "evidence": final_evidence
+            "labels": labels,
+            "confidences": confidences,
+            "reasoning": reasoning,
+            "raw": raw_text,
+            "model": model,
+            "engine": "cloud"
         }
     
     except Exception as e:
-        # Web search or Pass 2 failed, fall back to Pass 1 results
-        labels = [c.get("label", "") for c in candidates[:5]]
-        confs = [c.get("confidence", 0.0) for c in candidates[:5]]
-        
-        # Normalize confidences
-        total = sum(confs) if sum(confs) > 0 else 1.0
-        confs = [c / total for c in confs]
-        
         return {
-            "materials": labels,
-            "confidence": confs,
-            "description": visual_notes,
-            "engine": "cloud_qwen",
-            "evidence": []
+            "labels": [],
+            "confidences": [],
+            "reasoning": f"调用失败: {type(e).__name__}: {str(e)}",
+            "raw": "",
+            "model": model,
+            "engine": "error"
         }
 
-
-# ---------- Public API ----------
-@st.cache_data(show_spinner=False, ttl=7200)
+# ==================== 兼容接口 ====================
 def analyze_image(
-    image_path: str,
-    engine: str = "cloud_qwen",
+    image: Image.Image,
+    api_key: str = None,
     lang: str = "zh",
-    enable_web: bool = True,
-    web_k: int = 4,
-    web_lang: str = "zh"
+    engine: str = "qwen-vl",
+    enable_web: bool = False,
+    k_per_query: int = 4
 ) -> Dict:
     """
-    Use cloud VLM to analyze fabric image - Engine router.
+    分析图片 - 兼容旧接口
     
     Args:
-        image_path: Local image path
-        engine: Engine name
-            - "cloud_qwen": Qwen-VL (implemented)
-            - "cloud_gpt4o": GPT-4o-mini (not implemented)
-            - "cloud_gemini": Gemini (not implemented)
-        lang: Language code "zh" | "en"
-        enable_web: Enable web search verification
-        web_k: Number of search results per candidate
-        web_lang: Search language
+        image: PIL Image 对象
+        api_key: API Key（可选，会自动从环境变量或 secrets 读取）
+        lang: 语言
+        engine: 模型引擎
+        enable_web: 是否启用联网检索
+        k_per_query: 每个候选检索条数
     
     Returns:
         {
-            "materials": ["fabric1", "fabric2", ...][:5],
-            "confidence": [0.6, 0.25, 0.15, ...],
-            "description": "LLM short explanation",
-            "engine": "cloud_qwen",
-            "evidence": [{"label": "...", "urls": [...]}, ...]
+            "result": {
+                "labels": [...],
+                "confidences": [...],
+                "reasoning": "...",
+                "raw": "..."
+            },
+            "meta": {
+                "engine": "cloud",
+                "model": "qwen-vl-plus"
+            }
         }
-    
-    Raises:
-        ValueError: Unsupported engine
-        RuntimeError: Engine not implemented or dependencies not installed
-        NoAPIKeyError: Missing API Key
     """
-    # Engine router
-    if engine == "cloud_qwen":
-        return _analyze_qwen(image_path, lang=lang, enable_web=enable_web, web_k=web_k, web_lang=web_lang)
-    elif engine == "cloud_gpt4o":
-        raise RuntimeError("engine cloud_gpt4o not implemented yet")
-    elif engine == "cloud_gemini":
-        raise RuntimeError("engine cloud_gemini not implemented yet")
-    else:
-        raise ValueError(f"Unknown engine: {engine}")
+    # 如果提供了 api_key，设置到环境变量
+    if api_key:
+        os.environ["DASHSCOPE_API_KEY"] = api_key
+    
+    # 调用云端推理
+    result = cloud_infer(
+        pil_image=image,
+        engine=engine,
+        lang=lang,
+        enable_web=enable_web,
+        k_per_query=k_per_query
+    )
+    
+    # 提取 meta 信息
+    model = result.pop("model", engine)
+    engine_status = result.pop("engine", "cloud")
+    
+    return {
+        "result": result,
+        "meta": {
+            "engine": engine_status,
+            "model": model
+        }
+    }
