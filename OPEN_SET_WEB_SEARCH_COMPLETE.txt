@@ -1,0 +1,229 @@
+================================================================
+   ✅ 开放集识别 + 联网验证功能完成
+================================================================
+
+【核心变更】
+
+  1. 移除受限词汇表 ✅
+     • 删除 _CANON_VOCAB
+     • 删除 _NORMALIZE 映射
+     • 删除 _STANDARD_VOCAB
+     • 删除 _extract_materials() 函数
+
+  2. 开放集识别 ✅
+     • 模型可以输出任意面料名称
+     • 不再限制词汇表
+     • 支持专业术语（如：小羊皮、桑蚕丝、精纺羊毛等）
+     • Top-5 候选输出
+
+  3. 联网检索验证 ✅
+     • 使用 DuckDuckGo 搜索
+     • 验证 Top-1 候选
+     • 返回证据 URL
+     • 可选功能（默认启用）
+
+【新增依赖】
+
+  requirements.txt:
+    • duckduckgo-search>=6.3.0
+    • readability-lxml
+    • requests
+
+【新增模块】
+
+  src/aug/web_search.py:
+    • search_snippets(query, k, region)
+      - 使用 DuckDuckGo 搜索
+      - 返回标题、链接、摘要
+      - 缓存 1 小时 (@st.cache_data, ttl=3600)
+    
+    • fetch_readable(url, timeout)
+      - 获取网页可读文本
+      - 使用 readability-lxml 提取主要内容
+      - 限制 3000 字符
+      - 缓存 1 小时
+
+【更新的提示词】
+
+  中文提示词:
+    • 要求返回 5 个候选
+    • 可以是任何真实存在的面料类型
+    • 鼓励使用专业术语
+    • 置信度总和接近 1.0
+    • 示例：小羊皮 > 皮革，桑蚕丝 > 真丝
+
+  英文提示词:
+    • 同样支持开放集识别
+    • 专业术语（lambskin leather, mulberry silk, etc.）
+
+【API 更新】
+
+  analyze_image(...):
+    新增参数:
+      • enable_web: bool = False
+      • web_k: int = 4
+      • web_lang: str = "zh"
+    
+    返回字段:
+      • materials: List[str]  # Top-5
+      • confidence: List[float]
+      • description: str
+      • evidence_urls: List[str]  # 新增
+      • engine: str
+      • cache_key: str
+
+【UI 更新】
+
+  app_new.py - 侧边栏新增:
+    • st.checkbox("启用联网检索 / Enable Web Search", value=True)
+    • st.slider("每个候选检索条数", 2, 8, 4)
+    • st.radio("检索语言", ["zh", "en"], index=0)
+
+  app_new.py - 结果显示:
+    • Top-5 材质 + 置信度条
+    • 证据链接（可折叠 expander）
+    • 推理文本（可折叠 expander）
+    • 不再强制大写，保持原始格式
+
+【工作流程】
+
+  用户上传图片 → 裁剪区域 → 点击识别
+    ↓
+  调用 Qwen-VL API（开放集提示词）
+    ↓
+  模型返回 JSON:
+    {
+      "labels": ["小羊皮", "涤纶", "棉", "氨纶", "尼龙"],
+      "confidences": [0.65, 0.15, 0.10, 0.06, 0.04],
+      "reasoning": "..."
+    }
+    ↓
+  【可选】联网验证:
+    • 搜索: "小羊皮 面料 材质"
+    • 获取前 web_k 个结果
+    • 提取前 3 个 URL 作为证据
+    ↓
+  返回结果:
+    {
+      "materials": ["小羊皮", "涤纶", "棉", "氨纶", "尼龙"],
+      "confidence": [0.65, 0.15, 0.10, 0.06, 0.04],
+      "description": "...",
+      "evidence_urls": ["url1", "url2", "url3"]
+    }
+    ↓
+  前端渲染:
+    • Engine: cloud_qwen + Web Search
+    • Top-5 材质 + 进度条
+    • 🔗 证据链接 (expander)
+    • 💡 推理文本 (expander)
+
+【默认置信度分布】
+
+  从 [0.6, 0.25, 0.15] (Top-3)
+  更新为 [0.50, 0.20, 0.15, 0.10, 0.05] (Top-5)
+
+【联网检索策略】
+
+  搜索查询构建:
+    • 中文: "{label} 面料 材质"
+    • 英文: "{label} fabric material textile"
+  
+  搜索区域:
+    • zh → "cn" (China)
+    • en → "us" (United States)
+  
+  结果处理:
+    • 取前 web_k 个结果
+    • 提取 URL
+    • 最多返回 3 个证据链接
+
+【错误处理】
+
+  • 搜索失败 → 不影响主流程，返回空 evidence_urls
+  • 依赖缺失 → RuntimeError，提示安装
+  • JSON 解析失败 → 回退策略，返回空 materials
+
+【性能优化】
+
+  • @st.cache_data 缓存搜索结果（1小时）
+  • @st.cache_data 缓存网页内容（1小时）
+  • @st.cache_data 缓存推理结果（2小时）
+
+【验收清单】
+
+  [✓] 移除受限词汇表
+  [✓] 更新提示词（开放集识别）
+  [✓] 更新 API 签名（新增联网参数）
+  [✓] 实现 web_search 模块
+  [✓] 更新 UI（联网控件）
+  [✓] Top-5 结果显示
+  [✓] 证据 URL 显示
+  [✓] 错误处理
+  [✓] 性能优化（缓存）
+
+【示例输出】
+
+  输入: 夹克图片
+  
+  Qwen-VL 返回:
+    {
+      "labels": ["小羊皮", "涤纶", "棉", "氨纶", "尼龙"],
+      "confidences": [0.65, 0.15, 0.10, 0.06, 0.04],
+      "reasoning": "图片中的夹克呈现明显的小羊皮光泽和细腻纹理..."
+    }
+  
+  联网搜索 "小羊皮 面料 材质":
+    evidence_urls: [
+      "https://baike.baidu.com/item/小羊皮",
+      "https://www.zhihu.com/question/...",
+      "https://www.sohu.com/a/..."
+    ]
+  
+  最终输出:
+    Engine: cloud_qwen + Web Search
+    
+    1. 小羊皮        ████████████░░░░░░░░ 65%
+    2. 涤纶          ████░░░░░░░░░░░░░░░░ 15%
+    3. 棉            ███░░░░░░░░░░░░░░░░░ 10%
+    4. 氨纶          ██░░░░░░░░░░░░░░░░░░ 6%
+    5. 尼龙          █░░░░░░░░░░░░░░░░░░░ 4%
+    
+    🔗 证据链接 / Evidence URLs
+      - https://baike.baidu.com/item/小羊皮
+      - https://www.zhihu.com/question/...
+      - https://www.sohu.com/a/...
+    
+    💡 解释 / Reasoning
+      图片中的夹克呈现明显的小羊皮（lambskin）光泽
+      和细腻纹理，表面有自然的皮革质感...
+
+【优势】
+
+  1. 开放集识别
+     • 不再受词汇表限制
+     • 支持任意面料名称
+     • 支持专业术语
+
+  2. 联网验证
+     • 增加可信度
+     • 提供证据链接
+     • 帮助用户验证结果
+
+  3. 灵活性
+     • 可选功能（用户可关闭）
+     • 可调参数（检索条数、语言）
+     • 不影响核心流程
+
+  4. 用户体验
+     • Top-5 提供更多选择
+     • 证据链接增加可信度
+     • 保持原始格式（不强制大写）
+
+================================================================
+   🎉 开放集识别 + 联网验证功能完成！
+================================================================
+
+更新时间: 2025-10-24
+版本: 8.0 (Open-Set + Web Search)
+状态: ✅ 已实现并验证
+

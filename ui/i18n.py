@@ -1,396 +1,149 @@
 # -*- coding: utf-8 -*-
-# ui/i18n.py
-import streamlit as st
-import logging
+"""
+UI i18n for Cloud-Only Minimal Version
+极简云端版 UI 文案
+"""
 
-# New canonical keys (from clean table)
-zh = {
-    # App
-    "app.title": "AI面料识别推荐助手",
-    "app.subtitle": "上传服装图片,智能分析推荐合适面料",
-
-    # Sidebar - language
-    "sidebar.language.label": "语言",
-    "sidebar.language.zh": "简体中文",
-    "sidebar.language.en": "English",
-
-    # Sidebar - weights
-    "sidebar.weights.title": "权重设置",
-    "sidebar.weights.color": "颜色权重",
-    "sidebar.weights.gloss": "光泽权重",
-    "sidebar.weights.texture": "纹理权重",
-    "sidebar.weights.advanced": "高级权重配置",
-
-    # Sidebar - actions & flags
-    "sidebar.save_default": "保存为默认",
-    "sidebar.use_fine_rules": "使用精细规则",
-    "sidebar.use_rule_packs": "使用规则包(合并)",
-
-    # Sidebar - hybrid/local refine
-    "sidebar.hybrid.title": "混合推荐",
-    "sidebar.local_refine.enable": "启用局部细化",
-    "sidebar.local_refine.radius": "局部半径",
-
-    # Main
-    "main.upload.title": "上传图片",
-    "main.click_hint": "点击图片任意位置获取面料推荐",
-
-    # Panel
-    "panel.analysis.title": "分析结果",
-    "panel.coord.label": "坐标",
-    "panel.time.label": "时间",
-    "panel.topk.title": "推荐面料",
-    "panel.confidence.low": "置信度低,建议采样并标注提升",
-    "panel.coarse_suggestion.label": "粗粒度建议",
-    "panel.actions.save_sample": "保存为训练样本",
-    "panel.actions.add_vote": "加入多点投票",
-    "panel.recent_clicks.title": "最近点击",
-    "panel.region_info.unavailable": "区域信息不可用",
-
-    # Additional commonly used keys kept from previous set (aliases)
-    "layout.upload_title": "上传图片",
-    "layout.click_hint": "点击图片任意位置获取面料推荐",
-    "layout.lang_english": "English",
-
-    # Previous sidebar keys mapped to new text
-    "sidebar.language": "语言",  # alias of sidebar.language.label
-    "sidebar.weight_header": "权重设置",  # alias of sidebar.weights.title
-    "sidebar.color_weight": "颜色权重",
-    "sidebar.sheen_weight": "光泽权重",
-    "sidebar.texture_weight": "纹理权重",
-    "sidebar.exp_weight": "高级权重配置",
-    "sidebar.saved_msg": "已保存!",
-    "sidebar.use_fine": "使用精细面料库",  # alias for sidebar.use_fine_rules
-    "sidebar.fabric_preview": "面料预览",
-    "sidebar.search_placeholder": "搜索面料...",
-    "sidebar.col_name": "名称",
-    "sidebar.col_alias": "别名",
-    "sidebar.col_sheen": "光泽",
-    "sidebar.col_edge": "边缘",
-    "sidebar.col_notes": "说明",
-    "sidebar.no_entries": "暂无条目",
-
-    # Hybrid (kept for compatibility)
-    "ui.hybrid.title": "混合推荐",  # alias of sidebar.hybrid.title
-    "ui.hybrid.enabled": "启用局部细化",  # alias of sidebar.local_refine.enable
-    "ui.hybrid.radius": "局部半径",  # alias of sidebar.local_refine.radius
-    "ui.hybrid.alpha": "融合比例",
-    "ui.hybrid.tip_cached": "使用区域缓存",
-    "ui.hybrid.tip_refined": "已局部细化",
-
-    # Upload & attributes (compatibility)
-    "main.uploader": "上传图片",
-    "main.file_size_warning": "文件过大",
-    "main.attributes_title": "检测属性",
-
-    # Status & click (compatibility)
-    "ui.status.loading": "处理中",
-    "ui.status.ready": "就绪",
-    "ui.click.fallback": "无法捕获点击",
-    "ui.click.not_in_region": "点击区域无效",
-
-    # Region info (compatibility)
-    "region.unavailable": "区域信息不可用",  # alias of panel.region_info.unavailable
-    "region.coords_label": "坐标:({x}, {y})",
-    "region.explain": "颜色: {color}, 覆盖: {coverage}",
-
-    # Candidates
-    "candidates.score": "评分",
-    "candidates.description": "说明",
-
-    # Families
-    "family.sheen": "高光平滑类",
-    "family.twill": "斜纹类",
-    "family.sheer": "透纱类",
-    "family.pile": "绒类",
-    "family.knit": "针织类",
-
-    # Messages
-    "ui.save_success": "已保存(或已存在)",
-    "msg.validation_failed": "配置校验失败",
-    "msg.rules_fallback": "已回退到粗粒度规则",
-    "msg.mask_generation_failed": "掩膜生成失败",
-    "msg.attribute_extraction_failed": "属性提取失败",
-
-    # Missing keys - added for completeness
-    "main.candidates_title": "推荐面料",
-    "panel.right_title": "分析结果",
-    "panel.topk_title": "推荐面料",
-    "panel.confidence_title": "置信度与建议",
-    "panel.region_info_unavailable": "区域信息不可用",
-    "panel.low_confidence_tip": "置信度低,建议采样并标注提升",
-    "panel.coarse_suggestion_label": "粗粒度建议",
-    "panel.actions_title": "操作",
-    "panel.btn_save_training": "保存为训练样本",
-    "panel.btn_vote_up": "加入多点投票",
-    "panel.recent_clicks_label": "最近点击",
-    "ui.error_slic_fallback": "SLIC分割失败",
-    "ui.error_click_capture": "点击捕获失败",
-    "ui.error_image_failed": "图片加载失败",
-    "ui.error_save_failed": "保存失败",
-    "ui.label_as": "标注为",
-    "ui.submit_label": "提交标注",
-    "ui.performance_log": "性能日志",
-}
-
-en = {
-    # App
-    "app.title": "AI Fabric Recognition & Recommendation",
-    "app.subtitle": "Upload a garment image to get smart fabric recommendations",
-
-    # Sidebar - language
-    "sidebar.language.label": "Language",
-    "sidebar.language.zh": "简体中文",
-    "sidebar.language.en": "English",
-
-    # Sidebar - weights
-    "sidebar.weights.title": "Weights",
-    "sidebar.weights.color": "Color weight",
-    "sidebar.weights.gloss": "Gloss weight",
-    "sidebar.weights.texture": "Texture weight",
-    "sidebar.weights.advanced": "Advanced settings",
-
-    # Sidebar - actions & flags
-    "sidebar.save_default": "Save as default",
-    "sidebar.use_fine_rules": "Use fine rules",
-    "sidebar.use_rule_packs": "Use rule packs (merged)",
-
-    # Sidebar - hybrid/local refine
-    "sidebar.hybrid.title": "Hybrid recommendation",
-    "sidebar.local_refine.enable": "Enable local refinement",
-    "sidebar.local_refine.radius": "Patch radius",
-
-    # Main
-    "main.upload.title": "Upload image",
-    "main.click_hint": "Click anywhere on the image to get fabric suggestions",
-
-    # Panel
-    "panel.analysis.title": "Analysis",
-    "panel.coord.label": "Coord",
-    "panel.time.label": "Time",
-    "panel.topk.title": "Top-K Fabrics",
-    "panel.confidence.low": "Low confidence. Please sample and annotate to improve.",
-    "panel.coarse_suggestion.label": "Coarse suggestion",
-    "panel.actions.save_sample": "Save as training sample",
-    "panel.actions.add_vote": "Add to multi-point voting",
-    "panel.recent_clicks.title": "Recent clicks",
-    "panel.region_info.unavailable": "Region info unavailable",
-
-    # Aliases for compatibility with existing code
-    "layout.upload_title": "Upload Image",
-    "layout.click_hint": "Click anywhere on the image to get fabric recommendations",
-    "layout.lang_english": "English",
-
-    "sidebar.language": "Language",  # alias of sidebar.language.label
-    "sidebar.weight_header": "Weights",  # alias of sidebar.weights.title
-    "sidebar.color_weight": "Color weight",
-    "sidebar.sheen_weight": "Gloss weight",
-    "sidebar.texture_weight": "Texture weight",
-    "sidebar.exp_weight": "Advanced settings",
-    "sidebar.saved_msg": "Saved!",
-    "sidebar.use_fine": "Use Fine-grained Fabric Library",  # alias for sidebar.use_fine_rules
-    "sidebar.fabric_preview": "Fabric Preview",
-    "sidebar.search_placeholder": "Search fabrics...",
-    "sidebar.col_name": "Name",
-    "sidebar.col_alias": "Alias",
-    "sidebar.col_sheen": "Sheen",
-    "sidebar.col_edge": "Edge",
-    "sidebar.col_notes": "Notes",
-    "sidebar.no_entries": "No entries",
-
-    "ui.hybrid.title": "Hybrid recommendation",
-    "ui.hybrid.enabled": "Enable local refinement",
-    "ui.hybrid.radius": "Patch radius",
-    "ui.hybrid.alpha": "Fusion Ratio",
-    "ui.hybrid.tip_cached": "Using region cache",
-    "ui.hybrid.tip_refined": "Locally refined",
-
-    "main.uploader": "Upload Image",
-    "main.file_size_warning": "File too large",
-    "main.attributes_title": "Detected Attributes",
-
-    "ui.status.loading": "Processing",
-    "ui.status.ready": "Ready",
-    "ui.click.fallback": "Cannot capture clicks",
-    "ui.click.not_in_region": "Invalid click region",
-
-    "region.unavailable": "Region info unavailable",
-    "region.coords_label": "Coordinates: ({x}, {y})",
-    "region.explain": "Color: {color}, Coverage: {coverage}",
-
-    "candidates.score": "Score",
-    "candidates.description": "Description",
-
-    "family.sheen": "Glossy Smooth",
-    "family.twill": "Twill",
-    "family.sheer": "Sheer",
-    "family.pile": "Pile",
-    "family.knit": "Knit",
-
-    "ui.save_success": "Saved (or already exists)",
-    "msg.validation_failed": "Configuration validation failed",
-    "msg.rules_fallback": "Fallback to coarse rules",
-    "msg.mask_generation_failed": "Mask generation failed",
-    "msg.attribute_extraction_failed": "Attribute extraction failed",
-
-    # Missing keys - added for completeness
-    "main.candidates_title": "Recommended Fabrics",
-    "panel.right_title": "Analysis Results",
-    "panel.topk_title": "Top-K Fabrics",
-    "panel.confidence_title": "Confidence & Suggestions",
-    "panel.region_info_unavailable": "Region info unavailable",
-    "panel.low_confidence_tip": "Low confidence. Please sample and annotate to improve.",
-    "panel.coarse_suggestion_label": "Coarse suggestion",
-    "panel.actions_title": "Actions",
-    "panel.btn_save_training": "Save as training sample",
-    "panel.btn_vote_up": "Add to multi-point voting",
-    "panel.recent_clicks_label": "Recent Clicks",
-    "ui.error_slic_fallback": "SLIC segmentation failed",
-    "ui.error_click_capture": "Click capture failed",
-    "ui.error_image_failed": "Image loading failed",
-    "ui.error_save_failed": "Save failed",
-    "ui.label_as": "Label as",
-    "ui.submit_label": "Submit Label",
-    "ui.performance_log": "Performance Log",
-}
-
-
-def normalize_lang(lang: str = None) -> str:
-    """
-    Normalize language code to standard 'zh' or 'en'.
+TRANSLATIONS = {
+    "zh": {
+        # App
+        "app.title": "AI 面料识别与分析",
+        "app.subtitle": "基于云端 Qwen-VL 的智能面料分析工具",
+        
+        # Sidebar
+        "sidebar.title": "👔 面料分析器",
+        "sidebar.subtitle": "AI-Powered Fabric Recognition",
+        "sidebar.upload": "📤 上传图片",
+        "sidebar.upload_help": "支持 JPG、PNG 格式",
+        "sidebar.settings": "⚙️ 参数设置",
+        "sidebar.language": "🌐 语言 / Language",
+        "sidebar.crop_size": "📐 选框大小 (px)",
+        "sidebar.zoom": "🔍 预览放大倍数",
+        "sidebar.top_k": "📊 返回结果数",
+        "sidebar.about": "📖 关于",
+        
+        # Main Panel
+        "main.upload_prompt": "👈 请上传图片开始分析",
+        "main.adjust_crop": "👈 拖动调整裁剪框",
+        "main.preview_title": "预览区域",
+        "main.crop_info": "裁剪: {w}×{h} px",
+        "main.preview_info": "预览: {size}×{size} px (×{zoom})",
+        "main.recognize_button": "🚀 识别该区域",
+        "main.recognizing": "☁️ 调用云端识别中...",
+        "main.success": "✅ 识别完成！",
+        
+        # Results
+        "result.engine": "Engine: {engine}",
+        "result.no_materials": "未识别到材料",
+        "result.reasoning_title": "💡 解释 / Reasoning",
+        "result.reasoning_subtitle": "由云端大模型生成",
+        
+        # Errors
+        "error.no_api_key": "未配置 DASHSCOPE_API_KEY，请在 Secrets 中添加后重试。",
+        "error.config_steps": """
+**配置步骤：**
+1. 创建 `.streamlit/secrets.toml`
+2. 添加：`DASHSCOPE_API_KEY = "sk-your-key-here"`
+3. 重启应用
+""",
+        "error.recognition_failed": "❌ 识别失败: {error}",
+        "error.timeout": "⏱️ **网络超时** - 请检查网络连接或稍后重试",
+        "error.network": "🌐 **网络连接问题** - 请检查网络设置",
+        "error.quota": "📊 **API 配额不足** - 请稍后再试或检查账户余额",
+        "error.invalid_key": "🔑 **API Key 无效** - 请检查 Secrets 配置",
+        "error.not_found": "🔍 **资源未找到** - 请联系技术支持",
+        "error.suggestion": "💡 **建议**：检查网络连接、API Key 配置或稍后重试",
+        "error.image_load": "❌ 图片加载失败: {error}",
+        
+        # Footer
+        "footer.powered_by": "⚡ Powered by Qwen-VL",
+        "footer.interactive": "🖼️ Interactive Crop",
+        "footer.cached": "🚀 Cached for Speed",
+    },
     
-    Args:
-        lang: Language code (can be None, 'zh', 'zh-cn', 'en', 'en-us', etc.)
-    
-    Returns:
-        Normalized language code ('zh' or 'en')
-    
-    Examples:
-        normalize_lang('zh-CN') -> 'zh'
-        normalize_lang('en_US') -> 'en'
-        normalize_lang(None) -> 'zh' (default)
-    """
-    if not lang:
-        return "zh"
-    
-    lang = str(lang).lower().strip()
-    
-    # Chinese variants
-    if lang in ("zh", "zh-cn", "zh_cn", "zh-hans", "chs", "cn", "chinese"):
-        return "zh"
-    
-    # English variants
-    if lang in ("en", "en-us", "en_us", "en-gb", "english"):
-        return "en"
-    
-    # Default to Chinese for unknown
-    return "zh"
-
-
-def t(key: str, lang: str = None, default: str = None) -> str:
-    """
-    Get localized string by key with robust fallback.
-    
-    Args:
-        key: Translation key (e.g., 'app.title')
-        lang: Language code (can be 'zh', 'zh-cn', 'en', 'en-us', etc.). Defaults to session state.
-        default: Custom default value if key not found.
-    
-    Returns:
-        Translated string, or fallback if key missing.
-    
-    Fallback logic:
-        1. Normalize language code to 'zh' or 'en'
-        2. Try to get from locale dict
-        3. If missing and default provided, return default
-        4. If missing and no default, return humanized key name
-        5. Log warning for missing keys
-        6. Handle exceptions gracefully
-    
-    Examples:
-        t('app.title', 'zh') -> 'AI面料识别推荐助手'
-        t('missing.key', 'zh', default='默认值') -> '默认值'
-        t('missing.key', 'en') -> 'Missing Key' (humanized)
-    """
-    # Generic fallback values (last resort)
-    fallback_generic = {
-        "zh": "未命名",
-        "en": "Untitled"
+    "en": {
+        # App
+        "app.title": "AI Fabric Recognition & Analysis",
+        "app.subtitle": "Intelligent Fabric Analysis Tool Powered by Cloud Qwen-VL",
+        
+        # Sidebar
+        "sidebar.title": "👔 Fabric Analyst",
+        "sidebar.subtitle": "AI-Powered Fabric Recognition",
+        "sidebar.upload": "📤 Upload Image",
+        "sidebar.upload_help": "Supports JPG, PNG formats",
+        "sidebar.settings": "⚙️ Settings",
+        "sidebar.language": "🌐 Language",
+        "sidebar.crop_size": "📐 Crop Size (px)",
+        "sidebar.zoom": "🔍 Preview Zoom",
+        "sidebar.top_k": "📊 Top K Results",
+        "sidebar.about": "📖 About",
+        
+        # Main Panel
+        "main.upload_prompt": "👈 Please upload an image to start analysis",
+        "main.adjust_crop": "👈 Drag to adjust crop box",
+        "main.preview_title": "Preview Area",
+        "main.crop_info": "Crop: {w}×{h} px",
+        "main.preview_info": "Preview: {size}×{size} px (×{zoom})",
+        "main.recognize_button": "🚀 Recognize This Area",
+        "main.recognizing": "☁️ Calling cloud recognition...",
+        "main.success": "✅ Recognition complete!",
+        
+        # Results
+        "result.engine": "Engine: {engine}",
+        "result.no_materials": "No materials identified",
+        "result.reasoning_title": "💡 Reasoning",
+        "result.reasoning_subtitle": "Generated by cloud LLM",
+        
+        # Errors
+        "error.no_api_key": "DASHSCOPE_API_KEY not configured. Please add it in Secrets and retry.",
+        "error.config_steps": """
+**Configuration Steps:**
+1. Create `.streamlit/secrets.toml`
+2. Add: `DASHSCOPE_API_KEY = "sk-your-key-here"`
+3. Restart the app
+""",
+        "error.recognition_failed": "❌ Recognition failed: {error}",
+        "error.timeout": "⏱️ **Network Timeout** - Please check your connection or retry later",
+        "error.network": "🌐 **Network Connection Issue** - Please check network settings",
+        "error.quota": "📊 **API Quota Exceeded** - Please retry later or check account balance",
+        "error.invalid_key": "🔑 **Invalid API Key** - Please check Secrets configuration",
+        "error.not_found": "🔍 **Resource Not Found** - Please contact support",
+        "error.suggestion": "💡 **Suggestion**: Check network connection, API Key configuration, or retry later",
+        "error.image_load": "❌ Image load failed: {error}",
+        
+        # Footer
+        "footer.powered_by": "⚡ Powered by Qwen-VL",
+        "footer.interactive": "🖼️ Interactive Crop",
+        "footer.cached": "🚀 Cached for Speed",
     }
+}
+
+
+def t(key: str, lang: str = "zh", **kwargs) -> str:
+    """
+    Get translated text
     
-    try:
-        # Step 1: Normalize language code
-        if lang is None:
-            lang = st.session_state.get("lang", "zh")
-        lang = normalize_lang(lang)
-        
-        # Step 2: Select appropriate dictionary
-        locale_dict = zh if lang == "zh" else en
-        
-        # Step 3: Try to get translation
-        if key in locale_dict:
-            val = locale_dict[key]
-            # Ensure we're not returning garbled or empty values
-            if val and isinstance(val, str) and val.strip():
-                return val
-            else:
-                logging.warning(f"[i18n] Empty or invalid value for key '{key}' in lang '{lang}'")
-        
-        # Step 4: Key not found - log warning
-        logging.warning(f"[i18n] Missing translation key: '{key}' for lang '{lang}'")
-        
-        # Step 5: Return custom default if provided
-        if default is not None:
-            return default
-        
-        # Step 6: Generate humanized fallback from key
-        # e.g., "panel.right_title" -> "Right Title"
+    Args:
+        key: Translation key (e.g., "app.title")
+        lang: Language code ("zh" or "en")
+        **kwargs: Format parameters
+    
+    Returns:
+        Translated and formatted text
+    """
+    lang = lang.lower()
+    if lang not in TRANSLATIONS:
+        lang = "zh"
+    
+    text = TRANSLATIONS[lang].get(key, key)
+    
+    if kwargs:
         try:
-            parts = key.split('.')
-            last_part = parts[-1] if parts else key
-            humanized = last_part.replace('_', ' ').title()
-            # Only return humanized if it's different from the key
-            if humanized and humanized != key:
-                return humanized
-        except Exception:
-            pass
-        
-        # Step 7: Ultimate fallback
-        return fallback_generic.get(lang, "Untitled")
-        
-    except Exception as e:
-        # Catastrophic error - log and return safe fallback
-        logging.error(f"[i18n] Error getting translation for key '{key}': {e}")
-        return default if default is not None else fallback_generic.get(normalize_lang(lang), "Untitled")
+            return text.format(**kwargs)
+        except (KeyError, ValueError):
+            return text
+    
+    return text
 
 
-def _self_check():
-    """
-    Self-check function to verify i18n system is working correctly.
-    Call this during app initialization to ensure no garbled text.
-    """
-    # Critical keys that had issues before
-    keys = [
-        "sidebar.weight_header",       # Was: "閳挎瑱绗?" + value
-        "sidebar.weights.title",       # New canonical key
-        "main.candidates_title",       # Was: "濡絽鍞?" + value
-        "app.title",                   # Main app title
-    ]
-    
-    results = {}
-    for k in keys:
-        val = t(k, "zh")
-        results[k] = repr(val)
-    
-    print("[i18n self-check]", results)
-    
-    # Verify no garbled characters
-    garbled_patterns = ["閳挎瑱绗", "濡絽鍞", "棣冩啿", "闂傚倸鐗"]
-    for k, v in results.items():
-        for pattern in garbled_patterns:
-            if pattern in v:
-                logging.error(f"[i18n self-check] FAILED! Garbled text detected in '{k}': {v}")
-                return False
-    
-    logging.info("[i18n self-check] PASSED! All keys return clean Chinese text.")
-    return True
+__all__ = ["TRANSLATIONS", "t"]

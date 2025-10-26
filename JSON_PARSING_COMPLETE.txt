@@ -1,0 +1,211 @@
+================================================================
+   ✅ JSON 解析增强完成
+================================================================
+
+【实现功能】
+
+  1. 鲁棒的 JSON 提取
+     ✅ 方法 1: Markdown 代码块提取
+        • 支持 ```json ... ```
+        • 支持 ``` ... ```
+     
+     ✅ 方法 2: 正则表达式提取
+        • 提取第一个 {...} JSON 块
+        • 支持嵌套花括号
+        • 使用 re.DOTALL 匹配多行
+
+  2. 标签归一化
+     ✅ 使用 _NORMALIZE 映射
+        • "真皮" → "皮革"
+        • "丝缎" → "缎面"
+        • "锦纶" → "尼龙"
+        • "聚酯" → "涤纶"
+        • 等...
+     
+     ✅ Cap to Top-3
+        • normalized_labels[:3]
+        • confidences[:3]
+
+  3. 置信度处理
+     ✅ 场景 1: 完整且匹配
+        • 直接使用
+     
+     ✅ 场景 2: 缺失或长度不匹配
+        • 使用默认分布: [0.6, 0.25, 0.15]
+     
+     ✅ 场景 3: 长度对齐
+        • 确保 len(confidences) == len(labels)
+
+  4. 回退策略
+     ✅ JSON 解析失败时
+        • materials: []
+        • confidence: []
+        • description: 原始文本
+     
+     ✅ 前端显示
+        • 提示: "未从描述中抽取到明确的面料名称"
+        • 在 expander 中显示原始文本
+
+【代码变更】
+
+  src/fabric_api_infer.py (Line 211-266):
+  
+  • 方法 1: Markdown 代码块提取
+    if "```json" in text:
+        json_text = text.split("```json")[1].split("```")[0].strip()
+    elif "```" in text:
+        json_text = text.split("```")[1].split("```")[0].strip()
+  
+  • 方法 2: 正则表达式提取
+    else:
+        match = re.search(r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}', text, re.DOTALL)
+        if match:
+            json_text = match.group(0)
+  
+  • 标签归一化
+    normalized_labels = [_NORMALIZE.get(label, label) for label in labels]
+  
+  • 置信度处理
+    if not confidences or len(confidences) != len(normalized_labels):
+        confidences = [0.6, 0.25, 0.15][:len(normalized_labels)]
+  
+  • Cap to Top-3
+    top3_labels = normalized_labels[:3]
+    top3_confidences = confidences[:3]
+  
+  • 回退策略
+    except (json.JSONDecodeError, KeyError, ValueError, AttributeError):
+        return {
+            "materials": [],
+            "confidence": [],
+            "description": text,
+            "engine": "cloud_qwen",
+            "cache_key": _md5_file(image_path)
+        }
+
+【测试用例】
+
+  ✅ 测试 1: 标准 JSON（markdown 代码块）
+     输入: ```json {"labels": [...], ...} ```
+     输出: 正确解析 + 归一化
+
+  ✅ 测试 2: 纯文本 + JSON
+     输入: 文本... {"labels": [...]} 文本...
+     输出: 正确提取 JSON + 归一化
+
+  ✅ 测试 3: 置信度缺失
+     输入: {"labels": [...]}  # 无 confidences
+     输出: 使用默认分布 [0.6, 0.25, 0.15]
+
+  ✅ 测试 4: 置信度长度不匹配
+     输入: {"labels": [a, b, c], "confidences": [0.8]}
+     输出: 使用默认分布 [0.6, 0.25, 0.15]
+
+  ✅ 测试 5: 超过3个标签
+     输入: {"labels": [a, b, c, d, e], ...}
+     输出: 仅返回前3个
+
+  ✅ 测试 6: JSON 解析失败
+     输入: 纯文本，无 JSON
+     输出: materials=[], description=原始文本
+
+【正则表达式说明】
+
+  模式: r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}'
+  
+  • \{              - 匹配左花括号
+  • [^{}]*          - 匹配非花括号字符（0次或多次）
+  • (?:             - 非捕获组开始
+      \{            - 匹配左花括号（嵌套）
+      [^{}]*        - 匹配非花括号字符
+      \}            - 匹配右花括号（嵌套）
+      [^{}]*        - 匹配非花括号字符
+  • )*              - 非捕获组结束（0次或多次）
+  • \}              - 匹配右花括号
+  
+  re.DOTALL         - . 匹配包括换行符在内的所有字符
+
+【归一化映射】
+
+  _NORMALIZE = {
+      "真皮": "皮革",
+      "仿皮": "皮革",
+      "丝缎": "缎面",
+      "缎": "缎面",
+      "锦纶": "尼龙",
+      "聚酯": "涤纶",
+      "丹宁": "牛仔",
+      "rib": "针织",
+      "rayon": "人造丝",
+      "viscose": "人造丝",
+      "acetate": "醋酸纤维",
+      "flannel": "法兰绒"
+  }
+
+【默认置信度分布】
+
+  [0.6, 0.25, 0.15]
+  
+  • 第1个标签: 60% 置信度
+  • 第2个标签: 25% 置信度
+  • 第3个标签: 15% 置信度
+  
+  如果标签少于3个，自动截断:
+  • 1个标签: [0.6]
+  • 2个标签: [0.6, 0.25]
+  • 3个标签: [0.6, 0.25, 0.15]
+
+【异常处理】
+
+  捕获的异常:
+  • json.JSONDecodeError  - JSON 格式错误
+  • KeyError              - 缺少必需的键
+  • ValueError            - 值类型错误
+  • AttributeError        - 属性访问错误
+
+【文档】
+
+  • JSON_PARSING_SPEC.md - 完整的解析规范
+  • 包含测试用例和代码示例
+
+【验收清单】
+
+  [✓] Markdown 代码块提取
+  [✓] 正则表达式提取
+  [✓] 标签归一化
+  [✓] 置信度默认值
+  [✓] Cap to Top-3
+  [✓] 回退策略
+  [✓] 异常处理
+  [✓] 文档完整
+
+【优势】
+
+  1. 鲁棒性
+     • 能处理各种格式的响应
+     • 两种提取方法互补
+
+  2. 容错性
+     • JSON 解析失败时优雅降级
+     • 不会崩溃或抛出未捕获的异常
+
+  3. 一致性
+     • 标签归一化确保输出一致
+     • "真皮" 和 "皮革" 都映射到 "皮革"
+
+  4. 可预测性
+     • 置信度总是匹配标签数量
+     • 总是返回有效的数据结构
+
+  5. 用户友好
+     • 即使解析失败也能显示原始文本
+     • 不会显示技术错误信息
+
+================================================================
+   🎉 JSON 解析增强完成！现在可以处理各种响应格式！
+================================================================
+
+更新时间: 2025-10-24
+版本: 7.1 (Robust JSON Parsing)
+状态: ✅ 已实现并验证
+

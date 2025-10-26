@@ -1,1 +1,0 @@
-{"timestamp": "2025-10-13T13:55:40.839181", "image_name": "test_image.jpg", "top1_label": "cotton", "top1_score": 0.85, "time_ms": 150, "coarse_max": 0.92, "ai_reason": "测试", "results": [{"label": "cotton", "score": 0.85}, {"label": "linen", "score": 0.72}, {"label": "silk", "score": 0.68}]}

@@ -1,12 +1,4 @@
-# Cache directories
-cache/
-
-# Model weight files
-*.bin
-*.pt
-*.ckpt
-*.safetensors
-
+# AI Fashion Fabric Analyst - Cloud-Only
 # Python
 __pycache__/
 *.py[cod]
@@ -14,19 +6,45 @@ __pycache__/
 *.so
 .Python
 
-# Virtual environment
+# Virtual Environment
 venv/
+.venv/
 env/
 ENV/
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Cache
+.cache/
+cache/
+
+# Data (local only)
+data/patches/
+data/fabrics/
+data/*.npz
+
+# Logs
+logs/
+*.log
 
 # IDE
 .vscode/
 .idea/
-
-# Logs
-*.log
+*.swp
+*.swo
+*~
 
 # OS
 .DS_Store
 Thumbs.db
 
+# Temporary files
+*.tmp
+temp/
+
+# Web Cropper Frontend
+ui/web_cropper/frontend/node_modules/
+ui/web_cropper/frontend/.vite/
+ui/web_cropper/frontend/.build.stamp
+# Keep dist/ for production deployment

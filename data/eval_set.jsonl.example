@@ -1,4 +1,0 @@
-{"image":"data/patches/labeled/cotton/patch_001.jpg","coords":[150,200],"label":"cotton"}
-{"image":"data/patches/labeled/silk/patch_001.jpg","coords":[300,450],"label":"silk"}
-{"image":"data/patches/labeled/wool/sample1.jpg","coords":[180,220],"label":"wool"}
-

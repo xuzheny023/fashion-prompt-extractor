@@ -1,0 +1,21 @@
+[server]
+headless = true
+runOnSave = false
+fileWatcherType = "none"
+port = 8501
+
+[client]
+showErrorDetails = true
+toolbarMode = "minimal"
+
+[browser]
+gatherUsageStats = false
+serverAddress = "localhost"
+
+[runner]
+magicEnabled = true
+fastReruns = true
+
+[logger]
+level = "error"
+
