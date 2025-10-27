@@ -1,13 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-AI Fashion Fabric Analyst - 新 UI（带降级容错）
-- 入口由 app.py 调用本文件
-- 若找不到 ui.components 的完整组件，自动启用最小可运行实现
+AI Fashion Fabric Analyst - 新 UI（带降级容错 + 阿里云适配）
 """
-import os
-import io
-import json
-import requests
+import os, io, json, base64, requests
 import streamlit as st
 from PIL import Image
 
@@ -32,54 +27,117 @@ except Exception as e:
     _HAS_FULL_COMPONENTS = False
 
     def render_analysis_panel(image: Image.Image):
-        # 最小分析：给出基础尺寸、均值颜色（可拓展）
         w, h = image.size
-        return {
-            "width": w,
-            "height": h,
-        }
+        return {"width": w, "height": h}
 
     def _call_cloud_api(image: Image.Image, top_k: int):
         url = os.getenv("FABRIC_API_URL")
-        api_key = os.getenv("FABRIC_API_KEY")
         if not url:
             return {"error": "FABRIC_API_URL 未设置"}
+        provider = os.getenv("FABRIC_PROVIDER", "aliyun_api_key")
+        api_key = os.getenv("FABRIC_API_KEY")
+
+        # 准备图片（base64）
         buf = io.BytesIO()
         image.save(buf, format="PNG")
-        buf.seek(0)
-        files = {"image": ("upload.png", buf, "image/png")}
-        headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
-        resp = requests.post(url, files=files, data={"top_k": str(top_k)}, headers=headers, timeout=30)
-        if resp.status_code != 200:
-            return {"error": f"cloud status {resp.status_code}", "detail": resp.text[:500]}
+        img_b64 = base64.b64encode(buf.getvalue()).decode()
+
+        headers = {"Content-Type": "application/json"}
+        if provider == "aliyun_api_key" and api_key:
+            headers["Authorization"] = f"Bearer {api_key}"
+        elif api_key:  # 通用 Bearer
+            headers["Authorization"] = f"Bearer {api_key}"
+
+        # 选择兼容/原生
+        is_compatible = ("/compatible-mode/" in url) or url.endswith("/chat/completions")
+
+        if is_compatible:
+            payload = {
+                "model": os.getenv("FABRIC_MODEL", "qwen3-vl-flash"),
+                "messages": [{
+                    "role": "user",
+                    "content": [
+                        {"type": "input_text", "text": "你是纺织面料专家。请识别面料并仅输出 JSON:{material,texture,color,gloss,notes}"},
+                        {"type": "input_image", "image_url": f"data:image/png;base64,{img_b64}"}
+                    ]
+                }],
+                "temperature": 0.2
+            }
+        else:
+            payload = {
+                "model": os.getenv("FABRIC_MODEL", "qwen3-vl-flash"),
+                "input": {
+                    "messages": [{
+                        "role": "user",
+                        "content": [
+                            {"type": "input_text", "text": "你是纺织面料专家。请识别面料并仅输出 JSON:{material,texture,color,gloss,notes}"},
+                            {"type": "input_image", "image_url": f"data:image/png;base64,{img_b64}"}
+                        ]
+                    }]
+                },
+                "parameters": {"temperature": 0.2}
+            }
+
         try:
-            return resp.json()
+            resp = requests.post(url, headers=headers, json=payload, timeout=60)
+        except Exception as e:
+            return {"error": f"request failed: {e}"}
+
+        if resp.status_code != 200:
+            return {"error": f"cloud status {resp.status_code}", "detail": resp.text[:1000]}
+
+        try:
+            data = resp.json()
         except Exception:
             return {"raw": resp.text}
 
+        # 解析输出文本
+        text = None
+        if is_compatible:
+            try:
+                text = data["choices"][0]["message"]["content"]
+            except Exception:
+                text = None
+        else:
+            out = data.get("output") or {}
+            text = out.get("text") or ((out.get("choices") or [{}])[0].get("message") or {}).get("content")
+
+        result = {"raw": data}
+        if text:
+            result["text"] = text
+            # 如果模型严格按照 JSON 输出，转成对象供下游使用
+            try:
+                result["json"] = json.loads(text)
+            except Exception:
+                pass
+        return result
+
     def render_recommend_panel(image: Image.Image, analysis, top_k: int = 12, enable_zoom: bool = True):
-        st.markdown("**云端推荐结果**")
+        st.markdown("**云端结果**")
         data = _call_cloud_api(image, top_k=top_k)
         if "error" in data:
             st.error(f"云端请求失败：{data['error']}")
             if "detail" in data:
                 st.code(data["detail"][:800])
             return None
-        # 期望 data = { items: [ {image_url, score, meta...}, ... ] }
         items = data.get("items") or data.get("results") or []
-        if not items:
-            st.info("云端无结果返回")
-            return data
-        cols = st.columns(4)
-        for i, it in enumerate(items[:top_k]):
-            with cols[i % 4]:
-                st.image(it.get("image_url") or it.get("thumb"), use_column_width=True)
-                st.caption(f"score: {it.get('score')}")
+        if items:
+            cols = st.columns(4)
+            for i, it in enumerate(items[:top_k]):
+                with cols[i % 4]:
+                    st.image(it.get("image_url") or it.get("thumb"), use_column_width=True)
+                    st.caption(f"score: {it.get('score')}")
+        elif data.get("json"):
+            st.json(data["json"])
+        elif data.get("text"):
+            st.markdown(data["text"])
+        else:
+            st.info("云端无结构化结果返回")
         return data
 
     def render_confidence_panel(result):
-        st.markdown("**置信度 / 解释**")
-        st.json(result)
+        st.markdown("**置信度 / 原始返回**")
+        st.json(result.get("raw", result))
 
     def render_actions_panel():
         st.markdown("**操作**")
@@ -94,20 +152,13 @@ except Exception as e:
         return _render_history_panel_builtin()
 
 # ==================== 页面配置 ====================
-st.set_page_config(
-    page_title="AI Fashion Fabric Analyst",
-    page_icon="👔",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+st.set_page_config(page_title="AI Fashion Fabric Analyst", page_icon="👔", layout="wide", initial_sidebar_state="expanded")
 
 # ==================== 侧边栏 ====================
 with st.sidebar:
     st.title("👔 面料分析器 (Cloud)")
     st.caption("AI-Powered Fabric Recognition")
-    
     uploaded_file = st.file_uploader("📤 上传面料图片", type=["jpg", "jpeg", "png"])
-
     st.divider()
     with st.expander(f"{E('actions')} 参数设置", expanded=False):
         top_k = st.slider("候选数量 Top-K", 5, 50, 12)
