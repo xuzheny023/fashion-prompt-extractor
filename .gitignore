@@ -18,14 +18,12 @@ ENV/
 secrets.toml
 
 
-# Cache
+# Cache (云端版本不需要本地缓存)
 .cache/
 cache/
 
-# Data (local only)
-data/patches/
-data/fabrics/
-data/*.npz
+# IDE
+.idea/
 
 # Logs
 logs/

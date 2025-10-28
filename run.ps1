@@ -1,44 +1,46 @@
-# 一键启动脚本
-Write-Host "==> 启动 AI 面料识别应用" -ForegroundColor Green
+# AI Design Production Assistant - Startup Script
+Write-Host "==> Starting AI Design Production Assistant" -ForegroundColor Green
 
-# 检查虚拟环境
+# Check virtual environment
 if (!(Test-Path ".venv\Scripts\streamlit.exe")) {
-    Write-Host "❌ 虚拟环境未正确配置，请先运行 scripts\ensure_venv.ps1" -ForegroundColor Red
+    Write-Host "ERROR: Virtual environment not found. Please run: .\scripts\ensure_venv.ps1" -ForegroundColor Red
     exit 1
 }
 
-# 快速依赖检查（使用新的预检查系统）
-Write-Host "`n==> 检查依赖..." -ForegroundColor Cyan
-.\.venv\Scripts\python.exe dev\preflight.py
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "`n⚠️ 发现缺失依赖" -ForegroundColor Yellow
-    $response = Read-Host "是否自动安装？(y/n)"
+# Quick dependency check
+Write-Host "`n==> Checking dependencies..." -ForegroundColor Cyan
+$depCheck = .\.venv\Scripts\python.exe -c "import streamlit, dashscope, PIL; print('OK')" 2>&1
+if ($depCheck -notlike "*OK*") {
+    Write-Host "WARNING: Missing dependencies" -ForegroundColor Yellow
+    $response = Read-Host "Auto install? (y/n)"
     if ($response -eq "y" -or $response -eq "Y") {
-        Write-Host "`n==> 正在安装依赖..." -ForegroundColor Cyan
-        .\.venv\Scripts\python.exe dev\preflight.py --install
-        if ($LASTEXITCODE -ne 0) {
-            Write-Host "`n❌ 自动安装失败，请运行 scripts\ensure_venv.ps1" -ForegroundColor Red
-            exit 1
-        }
+        Write-Host "==> Installing dependencies..." -ForegroundColor Cyan
+        .\.venv\Scripts\python.exe -m pip install -r requirements.txt --quiet
+        Write-Host "SUCCESS: Dependencies installed" -ForegroundColor Green
     } else {
-        Write-Host "`n请运行以下命令之一修复依赖：" -ForegroundColor Yellow
-        Write-Host "  1. .\.venv\Scripts\python.exe dev\preflight.py --install" -ForegroundColor Gray
-        Write-Host "  2. .\scripts\ensure_venv.ps1" -ForegroundColor Gray
+        Write-Host "Please run: .\scripts\ensure_venv.ps1" -ForegroundColor Yellow
         exit 1
     }
-}
-
-# 检查 API Key
-if (Test-Path ".streamlit\secrets.toml") {
-    Write-Host "✅ 检测到 secrets 配置文件" -ForegroundColor Green
 } else {
-    Write-Host "⚠️ 未检测到 .streamlit\secrets.toml" -ForegroundColor Yellow
-    Write-Host "如果需要使用云端识别，请配置 DASHSCOPE_API_KEY" -ForegroundColor Yellow
+    Write-Host "SUCCESS: All dependencies OK" -ForegroundColor Green
 }
 
-Write-Host "`n==> 启动 Streamlit 应用..." -ForegroundColor Cyan
-Write-Host "应用地址: http://localhost:8501" -ForegroundColor Gray
-Write-Host "按 Ctrl+C 停止服务`n" -ForegroundColor Gray
+# Check API Key
+if (Test-Path ".streamlit\secrets.toml") {
+    Write-Host "SUCCESS: API Key config found" -ForegroundColor Green
+} else {
+    Write-Host "WARNING: .streamlit\secrets.toml not found" -ForegroundColor Yellow
+    Write-Host "         You need DASHSCOPE_API_KEY for cloud recognition" -ForegroundColor Gray
+}
 
-.\.venv\Scripts\streamlit.exe run app_new.py
+# Kill any existing streamlit processes
+Write-Host "`n==> Killing existing streamlit processes..." -ForegroundColor Cyan
+Get-Process -Name streamlit* -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+Start-Sleep -Seconds 1
 
+# Start application
+Write-Host "==> Starting application..." -ForegroundColor Cyan
+Write-Host "URL: http://localhost:9000" -ForegroundColor Green
+Write-Host "Press Ctrl+C to stop`n" -ForegroundColor Gray
+
+.\.venv\Scripts\streamlit.exe run app_new.py --server.port=9000
